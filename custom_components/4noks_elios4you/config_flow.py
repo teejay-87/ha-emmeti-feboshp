@@ -279,10 +279,15 @@ class Elios4YouOptionsFlow(OptionsFlowWithReload):
             step_id="init",
             data_schema=vol.Schema(
                 {
-                    # 1. Recovery script (right after variables description)
+                    # 1. Recovery script (right after variables description).
+                    # ``description={"suggested_value": ...}`` pre-fills the
+                    # form with the saved value but lets the user clear it.
+                    # Using ``default=`` here would resurrect the old value on
+                    # any submission where the field is empty — making the
+                    # script impossible to remove via the UI.
                     vol.Optional(
                         CONF_RECOVERY_SCRIPT,
-                        default=recovery_script,
+                        description={"suggested_value": recovery_script},
                     ): EntitySelector(
                         EntitySelectorConfig(domain="script"),
                     ),

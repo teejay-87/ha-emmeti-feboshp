@@ -8,9 +8,6 @@ from __future__ import annotations
 from collections.abc import Generator
 from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 
-import pytest
-from pytest_homeassistant_custom_component.common import MockConfigEntry
-
 # Direct imports using symlink (fournoks_elios4you -> 4noks_elios4you)
 from custom_components.fournoks_elios4you import config_flow as _elios4you_config_flow
 from custom_components.fournoks_elios4you.api import TelnetCommandError, TelnetConnectionError
@@ -28,6 +25,9 @@ from custom_components.fournoks_elios4you.const import (
     DEFAULT_FAILURES_THRESHOLD,
     DOMAIN,
 )
+import pytest
+from pytest_homeassistant_custom_component.common import MockConfigEntry
+
 from homeassistant import config_entries
 from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT
 from homeassistant.core import HomeAssistant
@@ -692,6 +692,56 @@ class TestOptionsFlowDirect:
         assert result["data"] == {
             CONF_SCAN_INTERVAL: new_scan_interval,
         }
+
+    async def test_options_flow_schema_allows_clearing_recovery_script(self) -> None:
+        """Clearing the recovery script via the form must remove it from options.
+
+        Regression: ``vol.Optional(CONF_RECOVERY_SCRIPT, default=...)`` caused
+        voluptuous to resurrect the saved value whenever the EntitySelector was
+        cleared and the form submitted without that key. The fix uses
+        ``description={"suggested_value": ...}`` so a missing key is preserved
+        as missing, not silently replaced.
+
+        This test exercises the actual voluptuous schema, which is where the
+        bug lived — direct ``async_step_init(user_input)`` calls bypass the
+        form validation that resurrects the default.
+        """
+        mock_entry = MagicMock()
+        mock_entry.data = {
+            CONF_NAME: TEST_NAME,
+            CONF_HOST: TEST_HOST,
+            CONF_PORT: TEST_PORT,
+        }
+        # The entry currently has a recovery script set.
+        mock_entry.options = {
+            CONF_SCAN_INTERVAL: TEST_SCAN_INTERVAL,
+            CONF_RECOVERY_SCRIPT: "script.restart_wifi",
+        }
+        mock_entry.entry_id = "test_entry_id"
+
+        flow = Elios4YouOptionsFlow()
+        with patch.object(
+            type(flow), "config_entry", new_callable=PropertyMock, return_value=mock_entry
+        ):
+            form = await flow.async_step_init(None)
+
+        # Pull the actual schema out of the form result.
+        schema = form["data_schema"]
+
+        # Simulate the form submission the HA frontend sends when the user
+        # CLEARS the EntitySelector: the key is absent from the form data.
+        form_data = {
+            CONF_SCAN_INTERVAL: TEST_SCAN_INTERVAL,
+            CONF_ENABLE_REPAIR_NOTIFICATION: True,
+            CONF_FAILURES_THRESHOLD: 3,
+            # CONF_RECOVERY_SCRIPT deliberately absent — simulating "cleared"
+        }
+        validated = schema(form_data)
+
+        # With the bug present: validated[CONF_RECOVERY_SCRIPT] would equal
+        # "script.restart_wifi" (default= resurrected it). With the fix, the
+        # key is either absent or empty — never the stale saved value.
+        assert validated.get(CONF_RECOVERY_SCRIPT, "") in ("", None)
 
     async def test_options_flow_with_default_scan_interval(self) -> None:
         """Test options flow uses default when no options set."""
