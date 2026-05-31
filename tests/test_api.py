@@ -17,6 +17,8 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock
 
+import pytest
+
 # Direct imports using symlink (fournoks_elios4you -> 4noks_elios4you)
 from custom_components.fournoks_elios4you.api import (
     Elios4YouAPI,
@@ -24,7 +26,6 @@ from custom_components.fournoks_elios4you.api import (
     TelnetConnectionError,
 )
 from custom_components.fournoks_elios4you.const import CONN_TIMEOUT, MANUFACTURER, MODEL
-import pytest
 
 from .conftest import TEST_HOST, TEST_NAME, TEST_PORT, TEST_SERIAL_NUMBER
 

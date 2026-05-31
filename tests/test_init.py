@@ -7,6 +7,8 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
 # Direct imports using symlink (fournoks_elios4you -> 4noks_elios4you)
 from custom_components.fournoks_elios4you import (
     RuntimeData,
@@ -28,8 +30,6 @@ from custom_components.fournoks_elios4you.const import (
     DOMAIN,
 )
 from custom_components.fournoks_elios4you.coordinator import Elios4YouCoordinator
-import pytest
-
 from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady

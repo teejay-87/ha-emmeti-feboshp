@@ -281,7 +281,12 @@ mark-parentheses = false
 
 [tool.ruff.lint.isort]
 force-sort-within-sections = true
-known-first-party = ["homeassistant"]
+# `custom_components.fournoks_elios4you` is the symlink path used by tests
+# (the real package starts with a digit and isn't a valid Python identifier).
+# Declaring it as first-party here makes ruff's import classification
+# deterministic regardless of whether the symlink exists on disk — CI,
+# pre-commit, and ad-hoc `uvx ruff` runs all produce the same ordering.
+known-first-party = ["homeassistant", "custom_components.fournoks_elios4you"]
 combine-as-imports = true
 split-on-trailing-comma = false
 

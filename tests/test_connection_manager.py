@@ -14,6 +14,8 @@ from __future__ import annotations
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
 from custom_components.fournoks_elios4you.connection_manager import (
     RESPONSE_SEPARATOR,
     ConnectionManager,
@@ -23,7 +25,6 @@ from custom_components.fournoks_elios4you.connection_manager import (
     TelnetConnectionError,
     _RetryableError,
 )
-import pytest
 
 TEST_HOST = "192.168.1.100"
 TEST_PORT = 5001
