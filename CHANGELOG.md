@@ -9,6 +9,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.1] - 2026-05-31
+
+🐛 **Patch Release** — fixes a single options-flow bug reported during v1.3.0 testing.
+
+### 🐛 Bug Fixes
+
+- **Recovery Script can now be cleared via the Options flow.** Previously, clearing the
+  Recovery Script field and submitting had no effect — reopening the Options form showed the
+  old value still attached. Root cause was `vol.Optional(CONF_RECOVERY_SCRIPT, default=...)`:
+  voluptuous substituted the saved value back in whenever the EntitySelector arrived empty,
+  so the cleared submission carried the stale value all the way to storage. Switched to
+  `description={"suggested_value": ...}`, which pre-fills the form for display without
+  resurrecting the value on an empty submission.
+
+### ✅ Tests
+
+- Regression test added that exercises the actual voluptuous schema (the bug lived in schema
+  validation, which direct `async_step_init` calls bypass).
+
+### ⚠️ Breaking Changes
+
+**None** — pure bug fix. Any existing recovery script that's still wanted continues to work
+unchanged.
+
+**Full Release Notes:** [docs/releases/v1.3.1.md](docs/releases/v1.3.1.md)
+
+**Full Changelog:** <https://github.com/alexdelprete/ha-4noks-elios4you/compare/v1.3.0...v1.3.1>
+
+---
+
 ## [1.3.0] - 2026-05-31
 
 🎉 **Official Stable Release** — ConnectionManager refactor, adaptive backoff, and connection
@@ -963,7 +993,8 @@ Initial release of the 4-noks Elios4you integration.
 
 ---
 
-[Unreleased]: https://github.com/alexdelprete/ha-4noks-elios4you/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/alexdelprete/ha-4noks-elios4you/compare/v1.3.1...HEAD
+[1.3.1]: https://github.com/alexdelprete/ha-4noks-elios4you/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/alexdelprete/ha-4noks-elios4you/compare/v1.2.0...v1.3.0
 [1.3.0-beta.1]: https://github.com/alexdelprete/ha-4noks-elios4you/compare/v1.2.0...v1.3.0-beta.1
 [1.2.0]: https://github.com/alexdelprete/ha-4noks-elios4you/compare/v1.1.1...v1.2.0
