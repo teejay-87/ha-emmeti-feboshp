@@ -9,6 +9,75 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.0] - 2026-05-31
+
+🎉 **Official Stable Release** — ConnectionManager refactor, adaptive backoff, and connection
+diagnostics that resolve the recurring "device deafness" symptom.
+
+This release promotes the `1.3.0-beta.1` work to stable after multi-day validation on a live
+device: **17 silent timeouts were auto-recovered over an 8-hour window with 0 command failures,
+0 offline events, and ~99.96% connection reuse**, and the manual "kick the device off WiFi"
+workaround went unused for days. See the beta entry below for the full architecture detail.
+
+### 📊 Diagnostics (changed since beta.1)
+
+- **Four** connection diagnostic sensors are now **enabled by default** (was two). Added
+  `Connection Silent Timeouts` and `Connection Last Error` to the defaults:
+  - `Connection State` and `Connection Consecutive Failures` show link health, but
+    auto-recovery keeps both at their healthy values during transient "deaf device" events.
+  - `Connection Silent Timeouts` is the **only** sensor that surfaces those auto-recovered
+    events — without it, a device still going deaf under the hood is invisible.
+  - `Connection Last Error` is empty when healthy but is the most useful field for diagnosing
+    a problem or filing a bug report.
+- The remaining eight diagnostic sensors stay opt-in.
+
+### 🏗️ Architecture
+
+- **Extracted `ConnectionManager`** (`connection_manager.py`) — the connection lifecycle is now
+  an explicit state machine (`DISCONNECTED → CONNECTING → READY → BACKOFF`, terminal `CLOSED`)
+  that owns the single TCP/telnet session and serialises every command. `api.py` is now a thin
+  parser/orchestrator on top of it; public API unchanged.
+
+### 🚀 Reliability (device-deafness mitigations)
+
+- **Reuse window raised to 90 s** (was 25 s) — one TCP session persists across the poll cadence
+  instead of churning a fresh socket every minute.
+- **Retries dropped from 3 to 1** per command — caps the worst-case connect-storm.
+- **TCP RST on error close** (`transport.abort()`) — a failed command drops the socket with RST
+  so the device frees its slot immediately instead of waiting out CLOSE_WAIT.
+- **Bounded `wait_closed()`** — a misbehaving device can no longer hang the integration on close.
+- **Exponential backoff** (5 s → 60 s) after 3 consecutive failures — the manager refuses new
+  connections while in backoff, giving the device room to recover.
+
+### 🔧 Logging
+
+- **Structured `(ConnMgr.*)` log prefix** for every state transition, connect attempt, retry,
+  close, and backoff event. Scope it via
+  `custom_components.4noks_elios4you.connection_manager: debug`.
+
+### 🧹 Code Quality
+
+- Dropped all `# type: ignore` comments; `DataUpdateCoordinator[bool]` and
+  `CoordinatorEntity[Elios4YouCoordinator]` are now properly parameterised.
+- Removed the unused `check_port()` and `as_diagnostics()` helpers.
+- Test coverage at 99% overall (211 tests).
+
+### 📚 Documentation
+
+- README updated with the new architecture, `(ConnMgr.*)` log format, and the four
+  default-enabled diagnostic sensors.
+
+### ⚠️ Breaking Changes
+
+**None** — `api.py`'s public surface is unchanged. Existing config entries, sensors, the relay
+switch, and automations keep working without modification.
+
+**Full Release Notes:** [docs/releases/v1.3.0.md](docs/releases/v1.3.0.md)
+
+**Full Changelog:** <https://github.com/alexdelprete/ha-4noks-elios4you/compare/v1.2.0...v1.3.0>
+
+---
+
 ## [1.3.0-beta.1] - 2026-05-27
 
 🧪 **Beta Release** — ConnectionManager refactor + adaptive backoff to address recurring "device deafness".
@@ -894,7 +963,9 @@ Initial release of the 4-noks Elios4you integration.
 
 ---
 
-[Unreleased]: https://github.com/alexdelprete/ha-4noks-elios4you/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/alexdelprete/ha-4noks-elios4you/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/alexdelprete/ha-4noks-elios4you/compare/v1.2.0...v1.3.0
+[1.3.0-beta.1]: https://github.com/alexdelprete/ha-4noks-elios4you/compare/v1.2.0...v1.3.0-beta.1
 [1.2.0]: https://github.com/alexdelprete/ha-4noks-elios4you/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/alexdelprete/ha-4noks-elios4you/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/alexdelprete/ha-4noks-elios4you/compare/v1.0.0...v1.1.0

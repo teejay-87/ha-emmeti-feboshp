@@ -10,7 +10,7 @@ from homeassistant.const import UnitOfEnergy, UnitOfPower
 # Base component constants
 NAME = "4-noks Elios4you integration"
 DOMAIN = "4noks_elios4you"
-VERSION = "1.3.0-beta.2"
+VERSION = "1.3.0"
 ATTRIBUTION = "by @alexdelprete"
 ISSUE_URL = "https://github.com/alexdelprete/ha-4noks-elios4you/issues"
 
@@ -477,8 +477,10 @@ SENSOR_ENTITIES = [
     },
     # ---- ConnectionManager diagnostic sensors ----
     # All routed to DIAGNOSTIC entity category (state_class=None triggers that
-    # in sensor.py). Two are enabled by default so users see connection health
-    # without having to enable anything; the rest are opt-in.
+    # in sensor.py). Four are enabled by default so users see connection health
+    # without enabling anything: cm_state + cm_consecutive_failures (link
+    # status), cm_silent_timeouts (the only signal for auto-recovered "deaf
+    # device" events), and cm_last_error (diagnosis). The rest are opt-in.
     {
         "name": "Connection State",
         "key": "cm_state",
@@ -567,7 +569,10 @@ SENSOR_ENTITIES = [
         "device_class": None,
         "state_class": None,
         "unit": None,
-        "enabled_default": False,
+        # Enabled by default: this is the ONLY signal that surfaces a
+        # "device went deaf" event. Auto-recovery resets consecutive_failures
+        # and keeps cm_state=ready, so the other defaults never reveal it.
+        "enabled_default": True,
     },
     {
         "name": "Connection Forced Aborts",
@@ -585,6 +590,8 @@ SENSOR_ENTITIES = [
         "device_class": None,
         "state_class": None,
         "unit": None,
-        "enabled_default": False,
+        # Enabled by default: empty when healthy, but the most useful field for
+        # diagnosing a problem / filing a bug report.
+        "enabled_default": True,
     },
 ]

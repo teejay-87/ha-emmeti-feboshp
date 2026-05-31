@@ -492,11 +492,23 @@ logger:
     custom_components.4noks_elios4you.connection_manager: debug
 ```
 
-**Diagnostic sensors (no log analysis required):** the integration exposes 12 opt-in sensors
-under the device's Diagnostic section: `Connection State`, `Connection Consecutive Failures`,
-`Connection Silent Timeouts`, `Connection Forced Aborts`, `Connection Reuse Hits`,
-`Connection Backoff Remaining`, and others. Enable the ones you want to watch from the device
-page — they make recurring problems visible without grepping logs.
+**Diagnostic sensors (no log analysis required):** the integration exposes 12 sensors under
+the device's Diagnostic section. **Four are enabled by default** so connection health is
+visible out of the box:
+
+- `Connection State` — current link state (`ready` / `connecting` / `backoff` / …).
+- `Connection Consecutive Failures` — failure streak; non-zero means recovery is struggling.
+- `Connection Silent Timeouts` — counts auto-recovered "device went deaf" events. This is the
+  **only** sensor that surfaces them: silent timeouts are retried transparently, so they leave
+  `Connection State` at `ready` and `Connection Consecutive Failures` at `0`. Watch this
+  counter to know whether the device is still going deaf under the hood.
+- `Connection Last Error` — last error message (empty when healthy); the most useful field when
+  filing a bug report.
+
+The remaining eight (`Connection Backoff Remaining`, `Connection Reuse Hits`,
+`Connection Connects Succeeded / Connect Failures`, `Connection Commands Sent / Failed /
+Retried`, `Connection Forced Aborts`) are opt-in — enable them from the device page when you
+want deeper telemetry. They make recurring problems visible without grepping logs.
 
 #### Temporary Debug Logging (No Restart Required)
 
