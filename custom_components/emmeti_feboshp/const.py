@@ -30,6 +30,8 @@ CONN_TIMEOUT = 5
 # Retry configuration for transient failures
 COMMAND_RETRY_COUNT: int = 3  # Retry each command up to 3 times
 COMMAND_RETRY_DELAY: float = 0.3  # 300ms delay between retries
+# Fast retry on transient disconnections
+FAST_RETRY_DELAY = 15  # seconds before retrying after a transient failure
 # Pause polling defaults
 DEFAULT_PAUSE_DURATION = 300  # 5 minutes
 

@@ -31,6 +31,7 @@ from .const import (
     DEFAULT_RECOVERY_SCRIPT,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
+    FAST_RETRY_DELAY,
     MIN_SCAN_INTERVAL,
 )
 from .helpers import log_debug, log_info, log_warning
@@ -251,6 +252,9 @@ class FebosHPCoordinator(DataUpdateCoordinator[bool]):
 
             # Reset failure counter on success
             self._consecutive_failures = 0
+            # Restore normal polling interval (may have been shortened by fast retry)
+            if self.update_interval != timedelta(seconds=self.scan_interval):
+                self.update_interval = timedelta(seconds=self.scan_interval)
         except Exception as ex:
             self.last_update_status = False
             self._consecutive_failures += 1
@@ -313,6 +317,23 @@ class FebosHPCoordinator(DataUpdateCoordinator[bool]):
                 if self._recovery_script:
                     await self._execute_recovery_script()
 
+            # Below threshold: transient failure — keep last values, schedule fast retry
+            if self._consecutive_failures < self._failures_threshold:
+                log_warning(
+                    _LOGGER,
+                    "async_update_data",
+                    "Transient failure, retrying in {delay}s (entities stay available)",
+                    delay=FAST_RETRY_DELAY,
+                    failures=self._consecutive_failures,
+                )
+                # Schedule a fast retry instead of waiting the full polling interval
+                self.update_interval = timedelta(seconds=FAST_RETRY_DELAY)
+                # Return True so HA does NOT mark entities as unavailable
+                return True
+
+            # At/above threshold: persistent failure — mark unavailable
+            # Restore normal interval so we don't hammer the device
+            self.update_interval = timedelta(seconds=self.scan_interval)
             raise UpdateFailed from ex
 
         return self.last_update_status
