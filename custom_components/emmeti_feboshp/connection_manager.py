@@ -370,6 +370,22 @@ class ConnectionManager:
             await self._close_safely(force_abort=False)
             self._transition(ConnectionState.CLOSED, reason="unload")
 
+    async def disconnect(self) -> None:
+        """Gracefully close the connection without entering terminal CLOSED state.
+
+        Used by the pause feature to release the TCP slot so the mobile app
+        can connect. The manager remains in DISCONNECTED and will reconnect
+        on the next execute() call.
+        """
+        async with self._lock:
+            log_debug(
+                _LOGGER,
+                f"{LOG_PREFIX}.disconnect",
+                "Disconnecting (non-terminal)",
+                state=self._metrics.state.value,
+            )
+            await self._close_safely(force_abort=False)
+
     # ------------------------------------------------------------------ #
     # Internal: state machine
     # ------------------------------------------------------------------ #

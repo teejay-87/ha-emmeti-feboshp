@@ -147,8 +147,8 @@ class FebosHPCoordinator(DataUpdateCoordinator[bool]):
         if self._pause_timer is not None:
             self._pause_timer.cancel()
             self._pause_timer = None
-        # Close connection so the device is free for the app
-        await self.api.close()
+        # Disconnect (not close!) so the device is free for the app
+        await self.api.disconnect()
         log_info(_LOGGER, "async_pause", "Polling paused, connection closed", duration=duration)
         # Schedule auto-resume if duration given
         if duration is not None and duration > 0:

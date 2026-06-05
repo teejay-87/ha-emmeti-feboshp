@@ -83,6 +83,11 @@ class FebosHPAPI:
         await self.connection_manager.close()
         self._update_diagnostic_data()
 
+    async def disconnect(self) -> None:
+        """Disconnect without entering terminal state (used by pause)."""
+        await self.connection_manager.disconnect()
+        self._update_diagnostic_data()
+
     async def async_get_data(self) -> bool:
         """Run one full read cycle: ``@dat`` + ``@sta`` + ``@inf`` + ``@DAM 1``.
 
