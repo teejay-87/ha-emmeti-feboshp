@@ -14,7 +14,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import FebosHPConfigEntry
-from .const import DOMAIN, SWITCH_ENTITIES
+from .const import DOMAIN, HP_SWITCH_ENTITIES, SWITCH_ENTITIES
 from .coordinator import FebosHPCoordinator
 from .helpers import log_debug
 
@@ -47,6 +47,21 @@ async def async_setup_entry(
         for switch_def in (cast(dict[str, Any], switch),)
         if coordinator.api.data[switch_def["key"]] is not None
     ]
+
+    # Add HP register-based switches
+    for switch in HP_SWITCH_ENTITIES:
+        switch_def = cast(dict[str, Any], switch)
+        if coordinator.api.data.get(switch_def["key"]) is not None:
+            switches.append(
+                FebosHPRegisterSwitch(
+                    coordinator,
+                    switch_def["name"],
+                    switch_def["key"],
+                    switch_def["icon"],
+                    switch_def["device_class"],
+                    switch_def["register"],
+                )
+            )
 
     async_add_entities(switches)
 
@@ -159,6 +174,100 @@ class FebosHPSwitch(CoordinatorEntity[FebosHPCoordinator], SwitchEntity):
         else:
             log_debug(_LOGGER, "async_turn_off", "Error turning switch off")
         # call coord update for immediate refresh state
+        self._handle_coordinator_update()
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return device specific attributes."""
+        return DeviceInfo(
+            hw_version=self._device_hwver,
+            identifiers={(DOMAIN, self._device_sn)},
+            manufacturer=self._device_manufact,
+            model=self._device_model,
+            name=self._device_name,
+            serial_number=self._device_sn,
+            sw_version=self._device_swver,
+        )
+
+
+class FebosHPRegisterSwitch(CoordinatorEntity[FebosHPCoordinator], SwitchEntity):
+    """Switch backed by a Modbus register (via @REG 1 command)."""
+
+    _attr_has_entity_name = True
+
+    def __init__(
+        self,
+        coordinator: FebosHPCoordinator,
+        name: str,
+        key: str,
+        icon: str,
+        device_class: SwitchDeviceClass,
+        register: int,
+    ) -> None:
+        """Initialize the HP register switch."""
+        super().__init__(coordinator)
+        self._coordinator = coordinator
+        self._key = key
+        self._icon = icon
+        self._device_class = device_class
+        self._register = register
+        self._device_name: str = str(self._coordinator.api.name)
+        self._device_host = self._coordinator.api.host
+        self._device_model: str = str(self._coordinator.api.data["model"])
+        self._device_manufact: str = str(self._coordinator.api.data["manufact"])
+        self._device_sn: str = str(self._coordinator.api.data["sn"])
+        self._device_swver: str = str(self._coordinator.api.data["swver"])
+        self._device_hwver: str = str(self._coordinator.api.data["hwver"])
+        self._attr_translation_key = key
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        self.async_write_ha_state()
+
+    @property
+    def icon(self) -> str:
+        """Return icon."""
+        return self._icon
+
+    @property
+    def device_class(self) -> SwitchDeviceClass:
+        """Return the switch device_class."""
+        return self._device_class
+
+    @property
+    def entity_category(self) -> EntityCategory | None:
+        """Return entity category."""
+        return EntityCategory.CONFIG
+
+    @property
+    def unique_id(self) -> str:
+        """Return a unique ID."""
+        return f"{DOMAIN}_{self._device_sn}_{self._key}"
+
+    @property
+    def is_on(self) -> bool:
+        """Return true if switch is on."""
+        return self._coordinator.api.data.get(self._key, 0) == 1
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        """Turn the switch on."""
+        success = await self._coordinator.api.set_hp_register(self._register, 1)
+        if success:
+            self._coordinator.api.data[self._key] = 1
+            log_debug(_LOGGER, "async_turn_on", "HP switch on", key=self._key)
+        else:
+            log_debug(_LOGGER, "async_turn_on", "HP switch on failed", key=self._key)
+        self._handle_coordinator_update()
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        """Turn the switch off."""
+        success = await self._coordinator.api.set_hp_register(self._register, 0)
+        if success:
+            self._coordinator.api.data[self._key] = 0
+            log_debug(_LOGGER, "async_turn_off", "HP switch off", key=self._key)
+        else:
+            log_debug(_LOGGER, "async_turn_off", "HP switch off failed", key=self._key)
         self._handle_coordinator_update()
 
     @property

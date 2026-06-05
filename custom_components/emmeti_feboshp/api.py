@@ -25,7 +25,7 @@ from .connection_manager import (
     TelnetCommandError,
     TelnetConnectionError,
 )
-from .const import MANUFACTURER, MODEL
+from .const import DAM1_REGISTERS, MANUFACTURER, MODEL
 from .helpers import log_debug
 
 # Re-export the exception types so existing callers
@@ -84,7 +84,7 @@ class FebosHPAPI:
         self._update_diagnostic_data()
 
     async def async_get_data(self) -> bool:
-        """Run one full read cycle: ``@dat`` + ``@sta`` + ``@inf``.
+        """Run one full read cycle: ``@dat`` + ``@sta`` + ``@inf`` + ``@DAM 1``.
 
         Raises:
             TelnetConnectionError: device unreachable.
@@ -103,6 +103,9 @@ class FebosHPAPI:
 
             inf = await self._command("@inf")
             self._merge_inf(inf)
+
+            dam1 = await self._command("@DAM 1")
+            self._merge_dam1(dam1)
 
             self._update_calculated()
         finally:
@@ -204,7 +207,8 @@ class FebosHPAPI:
 
         # First useful line index — skip the echoed command, or one extra if
         # the device prepended a LF.
-        if lines and lines[0].lower() in ("@dat", "@sta", "@inf", "@rel", "@hwr"):
+        first_line = lines[0].lower().strip() if lines else ""
+        if first_line in ("@dat", "@sta", "@inf", "@rel", "@hwr") or first_line.startswith("@dam"):
             lines_start = 1
         else:
             lines_start = 2
@@ -262,6 +266,56 @@ class FebosHPAPI:
         """Merge a parsed ``@inf`` response into ``self.data``."""
         for key, value in parsed.items():
             self.data[key] = str(value)
+
+    def _merge_dam1(self, parsed: dict[str, str]) -> None:
+        """Merge a parsed ``@DAM 1`` response into ``self.data``.
+
+        The DAM response has lines like: ``idx;address;value;extra``
+        After parsing, keys are the address strings, values are raw strings.
+        We map addresses to named keys using DAM1_REGISTERS and apply scaling.
+        """
+        # Build address->key+scale lookup
+        addr_map: dict[str, tuple[str, int | None]] = {
+            str(addr): (key, scale) for addr, key, scale in DAM1_REGISTERS
+        }
+        for addr_str, raw_value in parsed.items():
+            mapping = addr_map.get(addr_str)
+            if mapping is None:
+                continue
+            key, scale = mapping
+            try:
+                int_val = int(raw_value)
+                if scale:
+                    self.data[key] = round(int_val / scale, 2)
+                else:
+                    self.data[key] = int_val
+            except ValueError:
+                log_debug(
+                    _LOGGER,
+                    "_merge_dam1",
+                    "DAM1 value could not be parsed",
+                    address=addr_str,
+                    value=raw_value,
+                )
+
+    async def set_hp_register(self, address: int, value: int) -> bool:
+        """Write a single Modbus register via ``@REG 1 <addr> <value> 1``.
+
+        Returns True on success, False on failure.
+        """
+        try:
+            await self._command(f"@REG 1 {address} {value} 1")
+            return True
+        except (TelnetConnectionError, TelnetCommandError, ConnectionUnavailableError) as err:
+            log_debug(
+                _LOGGER,
+                "set_hp_register",
+                "Register write failed",
+                address=address,
+                value=value,
+                error=str(err),
+            )
+            return False
 
     def _update_calculated(self) -> None:
         """Recompute derived sensors (self-consumption, software version)."""
@@ -361,6 +415,10 @@ class FebosHPAPI:
 
         self.data["manufact"] = MANUFACTURER
         self.data["model"] = MODEL
+
+        # Seed HP (DAM 1) keys
+        for _addr, key, _scale in DAM1_REGISTERS:
+            self.data[key] = 0
 
         # Initial diagnostic snapshot so sensors created at startup have values.
         self._update_diagnostic_data()

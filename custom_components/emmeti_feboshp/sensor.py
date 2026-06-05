@@ -14,7 +14,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import FebosHPConfigEntry
-from .const import CONF_NAME, DOMAIN, SENSOR_ENTITIES
+from .const import CONF_NAME, DOMAIN, HP_SENSOR_ENTITIES, SENSOR_ENTITIES
 from .coordinator import FebosHPCoordinator
 from .helpers import log_debug
 
@@ -43,9 +43,9 @@ async def async_setup_entry(
     )
 
     sensors = []
-    for sensor in SENSOR_ENTITIES:
+    for sensor in SENSOR_ENTITIES + HP_SENSOR_ENTITIES:
         sensor_def = cast(dict[str, Any], sensor)
-        if coordinator.api.data[sensor_def["key"]] is not None:
+        if coordinator.api.data.get(sensor_def["key"]) is not None:
             sensors.append(
                 FebosHPSensor(
                     coordinator,
