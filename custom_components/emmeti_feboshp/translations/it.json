@@ -92,10 +92,38 @@
       "hw_wifi": { "name": "Versione HW Wifi" },
       "s2w_app_version": { "name": "Versione App Wifi" },
       "s2w_geps_version": { "name": "Versione Geps Wifi" },
-      "s2w_wlan_version": { "name": "Versione Wlan Wifi" }
+      "s2w_wlan_version": { "name": "Versione Wlan Wifi" },
+      "hp_external_temp": { "name": "PdC Temperatura Esterna" },
+      "hp_water_outlet_temp": { "name": "PdC Temperatura Mandata" },
+      "hp_water_inlet_temp": { "name": "PdC Temperatura Ritorno" },
+      "hp_dhw_setpoint": { "name": "PdC Setpoint ACS" },
+      "hp_ambient_temp": { "name": "PdC Temperatura Ambiente" },
+      "hp_dew_point_temp": { "name": "PdC Punto di Rugiada" },
+      "hp_ambient_setpoint": { "name": "PdC Setpoint Ambiente" },
+      "hp_water_target_temp": { "name": "PdC Temperatura Acqua Target" },
+      "hp_water_actual_temp": { "name": "PdC Temperatura Acqua Attuale" },
+      "hp_consumed_power": { "name": "PdC Potenza Assorbita" },
+      "hp_heating_power": { "name": "PdC Potenza Riscaldamento" },
+      "hp_cooling_power": { "name": "PdC Potenza Raffrescamento" },
+      "hp_dhw_power": { "name": "PdC Potenza ACS" },
+      "hp_compressor_freq": { "name": "PdC Frequenza Compressore" },
+      "hp_active_profile": { "name": "PdC Profilo Attivo" },
+      "hp_target_reached": { "name": "PdC Target Raggiunto" },
+      "hp_circulation_pump": { "name": "PdC Pompa Circolazione" },
+      "hp_valve_0": { "name": "PdC Valvola 0" },
+      "hp_valve_1": { "name": "PdC Valvola 1" },
+      "hp_valve_2": { "name": "PdC Valvola 2" },
+      "hp_valve_3": { "name": "PdC Valvola 3" },
+      "hp_valve_4": { "name": "PdC Valvola 4" },
+      "hp_valve_5": { "name": "PdC Valvola 5" },
+      "hp_valve_6": { "name": "PdC Valvola 6" }
     },
     "switch": {
-      "relay_state": { "name": "Rele" }
+      "relay_state": { "name": "Rele" },
+      "hp_onoff": { "name": "Pompa di Calore" },
+      "hp_winter_mode": { "name": "Modalita Inverno" },
+      "hp_night_mode": { "name": "Modalita Notte" },
+      "hp_turbo_mode": { "name": "Modalita Turbo" }
     }
   },
   "issues": {

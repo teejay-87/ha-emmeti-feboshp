@@ -104,10 +104,38 @@
       "cm_commands_retried": { "name": "Connection Commands Retried" },
       "cm_silent_timeouts": { "name": "Connection Silent Timeouts" },
       "cm_forced_aborts": { "name": "Connection Forced Aborts" },
-      "cm_last_error": { "name": "Connection Last Error" }
+      "cm_last_error": { "name": "Connection Last Error" },
+      "hp_external_temp": { "name": "HP External Temperature" },
+      "hp_water_outlet_temp": { "name": "HP Water Outlet Temperature" },
+      "hp_water_inlet_temp": { "name": "HP Water Inlet Temperature" },
+      "hp_dhw_setpoint": { "name": "HP DHW Setpoint" },
+      "hp_ambient_temp": { "name": "HP Ambient Temperature" },
+      "hp_dew_point_temp": { "name": "HP Dew Point Temperature" },
+      "hp_ambient_setpoint": { "name": "HP Ambient Setpoint" },
+      "hp_water_target_temp": { "name": "HP Water Target Temperature" },
+      "hp_water_actual_temp": { "name": "HP Water Actual Temperature" },
+      "hp_consumed_power": { "name": "HP Consumed Power" },
+      "hp_heating_power": { "name": "HP Heating Power" },
+      "hp_cooling_power": { "name": "HP Cooling Power" },
+      "hp_dhw_power": { "name": "HP DHW Power" },
+      "hp_compressor_freq": { "name": "HP Compressor Frequency" },
+      "hp_active_profile": { "name": "HP Active Profile" },
+      "hp_target_reached": { "name": "HP Target Reached" },
+      "hp_circulation_pump": { "name": "HP Circulation Pump" },
+      "hp_valve_0": { "name": "HP Valve 0" },
+      "hp_valve_1": { "name": "HP Valve 1" },
+      "hp_valve_2": { "name": "HP Valve 2" },
+      "hp_valve_3": { "name": "HP Valve 3" },
+      "hp_valve_4": { "name": "HP Valve 4" },
+      "hp_valve_5": { "name": "HP Valve 5" },
+      "hp_valve_6": { "name": "HP Valve 6" }
     },
     "switch": {
-      "relay_state": { "name": "Relay" }
+      "relay_state": { "name": "Relay" },
+      "hp_onoff": { "name": "Heat Pump" },
+      "hp_winter_mode": { "name": "Winter Mode" },
+      "hp_night_mode": { "name": "Night Mode" },
+      "hp_turbo_mode": { "name": "Turbo Mode" }
     }
   },
   "issues": {
