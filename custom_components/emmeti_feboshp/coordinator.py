@@ -3,6 +3,9 @@
 https://github.com/teejay-87/ha-emmeti-feboshp
 """
 
+from __future__ import annotations
+
+import asyncio
 from datetime import UTC, datetime, timedelta
 import logging
 import time
@@ -113,6 +116,10 @@ class FebosHPCoordinator(DataUpdateCoordinator[bool]):
             self.conf_port,
         )
 
+        # Pause/resume support
+        self._paused = False
+        self._pause_timer: asyncio.TimerHandle | None = None
+
         log_debug(_LOGGER, "__init__", "Coordinator config data", data=config_entry.data)
         log_debug(
             _LOGGER,
@@ -123,8 +130,47 @@ class FebosHPCoordinator(DataUpdateCoordinator[bool]):
             scan_interval=self.scan_interval,
         )
 
+    @property
+    def is_paused(self) -> bool:
+        """Return whether polling is paused."""
+        return self._paused
+
+    async def async_pause(self, duration: int | None = None) -> None:
+        """Pause polling and close the connection to free the device.
+
+        Args:
+            duration: auto-resume after this many seconds, or None for indefinite.
+
+        """
+        self._paused = True
+        # Cancel any existing timer
+        if self._pause_timer is not None:
+            self._pause_timer.cancel()
+            self._pause_timer = None
+        # Close connection so the device is free for the app
+        await self.api.close()
+        log_info(_LOGGER, "async_pause", "Polling paused, connection closed", duration=duration)
+        # Schedule auto-resume if duration given
+        if duration is not None and duration > 0:
+            self._pause_timer = self.hass.loop.call_later(
+                duration, lambda: self.hass.async_create_task(self.async_resume())
+            )
+
+    async def async_resume(self) -> None:
+        """Resume polling."""
+        if self._pause_timer is not None:
+            self._pause_timer.cancel()
+            self._pause_timer = None
+        self._paused = False
+        log_info(_LOGGER, "async_resume", "Polling resumed")
+        # Trigger an immediate refresh
+        await self.async_request_refresh()
+
     async def async_update_data(self) -> bool:
         """Update data method."""
+        if self._paused:
+            log_debug(_LOGGER, "async_update_data", "Polling paused, skipping")
+            return True
         log_debug(_LOGGER, "async_update_data", "Update started", time=datetime.now(tz=UTC))
         try:
             self.last_update_status = await self.api.async_get_data()

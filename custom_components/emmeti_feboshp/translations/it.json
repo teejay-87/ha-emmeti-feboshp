@@ -123,7 +123,8 @@
       "hp_onoff": { "name": "Pompa di Calore" },
       "hp_winter_mode": { "name": "Modalita Inverno" },
       "hp_night_mode": { "name": "Modalita Notte" },
-      "hp_turbo_mode": { "name": "Modalita Turbo" }
+      "hp_turbo_mode": { "name": "Modalita Turbo" },
+      "pause_polling": { "name": "Pausa Polling (5 min)" }
     }
   },
   "issues": {

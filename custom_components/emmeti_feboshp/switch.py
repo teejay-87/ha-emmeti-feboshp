@@ -14,7 +14,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import FebosHPConfigEntry
-from .const import DOMAIN, HP_SWITCH_ENTITIES, SWITCH_ENTITIES
+from .const import DEFAULT_PAUSE_DURATION, DOMAIN, HP_SWITCH_ENTITIES, SWITCH_ENTITIES
 from .coordinator import FebosHPCoordinator
 from .helpers import log_debug
 
@@ -62,6 +62,9 @@ async def async_setup_entry(
                     switch_def["register"],
                 )
             )
+
+    # Add Pause Polling switch
+    switches.append(FebosHPPauseSwitch(coordinator))
 
     async_add_entities(switches)
 
@@ -269,6 +272,81 @@ class FebosHPRegisterSwitch(CoordinatorEntity[FebosHPCoordinator], SwitchEntity)
         else:
             log_debug(_LOGGER, "async_turn_off", "HP switch off failed", key=self._key)
         self._handle_coordinator_update()
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return device specific attributes."""
+        return DeviceInfo(
+            hw_version=self._device_hwver,
+            identifiers={(DOMAIN, self._device_sn)},
+            manufacturer=self._device_manufact,
+            model=self._device_model,
+            name=self._device_name,
+            serial_number=self._device_sn,
+            sw_version=self._device_swver,
+        )
+
+
+class FebosHPPauseSwitch(CoordinatorEntity[FebosHPCoordinator], SwitchEntity):
+    """Switch to pause polling and free the TCP connection for the mobile app.
+
+    ON = polling paused (connection released).
+    OFF = polling active (normal operation).
+
+    When turned on, auto-resumes after DEFAULT_PAUSE_DURATION seconds
+    unless turned off manually first.
+    """
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "pause_polling"
+
+    def __init__(self, coordinator: FebosHPCoordinator) -> None:
+        """Initialize the pause switch."""
+        super().__init__(coordinator)
+        self._coordinator = coordinator
+        self._device_name: str = str(self._coordinator.api.name)
+        self._device_sn: str = str(self._coordinator.api.data["sn"])
+        self._device_model: str = str(self._coordinator.api.data["model"])
+        self._device_manufact: str = str(self._coordinator.api.data["manufact"])
+        self._device_swver: str = str(self._coordinator.api.data["swver"])
+        self._device_hwver: str = str(self._coordinator.api.data["hwver"])
+
+    @property
+    def icon(self) -> str:
+        """Return icon."""
+        return "mdi:pause-circle-outline" if self.is_on else "mdi:play-circle-outline"
+
+    @property
+    def entity_category(self) -> EntityCategory | None:
+        """Return entity category."""
+        return EntityCategory.CONFIG
+
+    @property
+    def unique_id(self) -> str:
+        """Return a unique ID."""
+        return f"{DOMAIN}_{self._device_sn}_pause_polling"
+
+    @property
+    def is_on(self) -> bool:
+        """Return true if polling is paused."""
+        return self._coordinator.is_paused
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        """Pause polling with auto-resume after DEFAULT_PAUSE_DURATION."""
+        await self._coordinator.async_pause(duration=DEFAULT_PAUSE_DURATION)
+        self.async_write_ha_state()
+        log_debug(_LOGGER, "async_turn_on", "Polling paused (auto-resume in 5 min)")
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        """Resume polling immediately."""
+        await self._coordinator.async_resume()
+        self.async_write_ha_state()
+        log_debug(_LOGGER, "async_turn_off", "Polling resumed")
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle coordinator update — refresh switch state (auto-resume)."""
+        self.async_write_ha_state()
 
     @property
     def device_info(self) -> DeviceInfo:

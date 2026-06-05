@@ -135,7 +135,8 @@
       "hp_onoff": { "name": "Heat Pump" },
       "hp_winter_mode": { "name": "Winter Mode" },
       "hp_night_mode": { "name": "Night Mode" },
-      "hp_turbo_mode": { "name": "Turbo Mode" }
+      "hp_turbo_mode": { "name": "Turbo Mode" },
+      "pause_polling": { "name": "Pause Polling (5 min)" }
     }
   },
   "issues": {
