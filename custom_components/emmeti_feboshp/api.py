@@ -1,4 +1,4 @@
-"""API layer for 4-noks Elios4you.
+"""API layer for Emmeti Febos HP.
 
 This module is a thin protocol wrapper over the :class:`ConnectionManager`.
 It owns no sockets and no retry/backoff logic — that all lives in the
@@ -10,7 +10,7 @@ manager. What lives here:
   (``telnet_set_relay``) used by the coordinator and the switch entity.
 * The data dictionary that backs every sensor entity in the integration.
 
-https://github.com/alexdelprete/ha-4noks-elios4you
+https://github.com/teejay-87/ha-emmeti-feboshp
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ from .helpers import log_debug
 # (``coordinator``, ``config_flow``, tests) don't need to change imports.
 __all__ = [
     "ConnectionUnavailableError",
-    "Elios4YouAPI",
+    "FebosHPAPI",
     "TelnetCommandError",
     "TelnetConnectionError",
 ]
@@ -40,8 +40,8 @@ __all__ = [
 _LOGGER = logging.getLogger(__name__)
 
 
-class Elios4YouAPI:
-    """Protocol-level API for an Elios4you device.
+class FebosHPAPI:
+    """Protocol-level API for a FebosHP device.
 
     Connection lifecycle, serialization, retries, and backoff are owned by
     :class:`ConnectionManager`; this class only formats commands and parses

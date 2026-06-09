@@ -2,8 +2,8 @@
   "config": {
     "step": {
       "user": {
-        "title": "Configuracao de Ligacao do Elios4You",
-        "description": "Se precisar de ajuda com a configuracao, visite: https://github.com/alexdelprete/ha-4noks-elios4you",
+        "title": "Configuracao de Ligacao do FebosHP",
+        "description": "Se precisar de ajuda com a configuracao, visite: https://github.com/teejay-87/ha-emmeti-feboshp",
         "data": {
           "name": "Nome personalizado do dispositivo (usado como prefixo dos sensores)",
           "host": "IP ou nome do host",
@@ -12,7 +12,7 @@
         }
       },
       "reconfigure": {
-        "title": "Reconfigurar Ligacao do Elios4You",
+        "title": "Reconfigurar Ligacao do FebosHP",
         "description": "Atualizar definicoes de ligacao do dispositivo",
         "data": {
           "name": "Nome personalizado do dispositivo (usado como prefixo dos sensores)",
@@ -35,7 +35,7 @@
   "options": {
     "step": {
       "init": {
-        "title": "Opcoes do Elios4You",
+        "title": "Opcoes do FebosHP",
         "description": "Configurar opcoes de execucao",
         "data": {
           "scan_interval": "Periodo de consulta em segundos (30-600)",
@@ -101,20 +101,20 @@
   "issues": {
     "connection_failed": {
       "title": "Nao foi possivel ligar a {device_name}",
-      "description": "A integracao nao consegue ligar ao dispositivo Elios4You em {host}:{port}.\n\n**Possiveis causas:**\n- O dispositivo esta desligado ou nao ligado a rede\n- O endereco IP mudou\n- Uma firewall esta a bloquear a ligacao\n- A porta Telnet nao esta acessivel\n\n**Para resolver:**\n1. Verifique se o dispositivo esta ligado e conectado a sua rede\n2. Verifique o endereco IP na tabela DHCP do seu router\n3. Se o IP mudou, reconfigure a integracao com o novo endereco"
+      "description": "A integracao nao consegue ligar ao dispositivo FebosHP em {host}:{port}.\n\n**Possiveis causas:**\n- O dispositivo esta desligado ou nao ligado a rede\n- O endereco IP mudou\n- Uma firewall esta a bloquear a ligacao\n- A porta Telnet nao esta acessivel\n\n**Para resolver:**\n1. Verifique se o dispositivo esta ligado e conectado a sua rede\n2. Verifique o endereco IP na tabela DHCP do seu router\n3. Se o IP mudou, reconfigure a integracao com o novo endereco"
     },
     "recovery_success": {
       "title": "{device_name} recuperou",
-      "description": "O seu dispositivo Elios4You esta a responder novamente.\n\n**Inicio da falha:** {started_at}\n**Script executado:** {script_executed_at}\n**Hora de recuperacao:** {ended_at}\n**Tempo de inatividade total:** {downtime}\n\nO script de recuperacao **{script_name}** foi executado."
+      "description": "O seu dispositivo FebosHP esta a responder novamente.\n\n**Inicio da falha:** {started_at}\n**Script executado:** {script_executed_at}\n**Hora de recuperacao:** {ended_at}\n**Tempo de inatividade total:** {downtime}\n\nO script de recuperacao **{script_name}** foi executado."
     },
     "recovery_success_no_script": {
       "title": "{device_name} recuperou",
-      "description": "O seu dispositivo Elios4You esta a responder novamente.\n\n**Inicio da falha:** {started_at}\n**Hora de recuperacao:** {ended_at}\n**Tempo de inatividade total:** {downtime}"
+      "description": "O seu dispositivo FebosHP esta a responder novamente.\n\n**Inicio da falha:** {started_at}\n**Hora de recuperacao:** {ended_at}\n**Tempo de inatividade total:** {downtime}"
     }
   },
   "exceptions": {
     "telnet_connection_error": {
-      "message": "Falha ao ligar ao dispositivo Elios4You em {host}:{port} (tempo limite: {timeout}s)"
+      "message": "Falha ao ligar ao dispositivo FebosHP em {host}:{port} (tempo limite: {timeout}s)"
     },
     "telnet_command_error": {
       "message": "O comando Telnet {command} falhou ao executar"

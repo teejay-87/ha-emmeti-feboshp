@@ -2,8 +2,8 @@
   "config": {
     "step": {
       "user": {
-        "title": "Elios4You Verbindungskonfiguration",
-        "description": "Wenn Sie Hilfe bei der Konfiguration benotigen, besuchen Sie: https://github.com/alexdelprete/ha-4noks-elios4you",
+        "title": "FebosHP Verbindungskonfiguration",
+        "description": "Wenn Sie Hilfe bei der Konfiguration benotigen, besuchen Sie: https://github.com/teejay-87/ha-emmeti-feboshp",
         "data": {
           "name": "Geratename (wird als Sensorprafix verwendet)",
           "host": "IP oder Hostname",
@@ -12,7 +12,7 @@
         }
       },
       "reconfigure": {
-        "title": "Elios4You Verbindung neu konfigurieren",
+        "title": "FebosHP Verbindung neu konfigurieren",
         "description": "Gerateverbindungseinstellungen aktualisieren",
         "data": {
           "name": "Geratename (wird als Sensorprafix verwendet)",
@@ -35,7 +35,7 @@
   "options": {
     "step": {
       "init": {
-        "title": "Elios4You Optionen",
+        "title": "FebosHP Optionen",
         "description": "Laufzeitoptionen konfigurieren",
         "data": {
           "scan_interval": "Abfrageintervall in Sekunden (30-600)",
@@ -101,20 +101,20 @@
   "issues": {
     "connection_failed": {
       "title": "Verbindung zu {device_name} nicht moglich",
-      "description": "Die Integration kann keine Verbindung zu Ihrem Elios4You-Gerat unter {host}:{port} herstellen.\n\n**Mogliche Ursachen:**\n- Das Gerat ist ausgeschaltet oder nicht mit dem Netzwerk verbunden\n- Die IP-Adresse hat sich geandert\n- Eine Firewall blockiert die Verbindung\n- Der Telnet-Port ist nicht zuganglich\n\n**Zur Losung:**\n1. Prufen Sie, ob das Gerat eingeschaltet und mit Ihrem Netzwerk verbunden ist\n2. Uberprufen Sie die IP-Adresse in der DHCP-Tabelle Ihres Routers\n3. Wenn sich die IP geandert hat, konfigurieren Sie die Integration mit der neuen Adresse neu"
+      "description": "Die Integration kann keine Verbindung zu Ihrem FebosHP-Gerat unter {host}:{port} herstellen.\n\n**Mogliche Ursachen:**\n- Das Gerat ist ausgeschaltet oder nicht mit dem Netzwerk verbunden\n- Die IP-Adresse hat sich geandert\n- Eine Firewall blockiert die Verbindung\n- Der Telnet-Port ist nicht zuganglich\n\n**Zur Losung:**\n1. Prufen Sie, ob das Gerat eingeschaltet und mit Ihrem Netzwerk verbunden ist\n2. Uberprufen Sie die IP-Adresse in der DHCP-Tabelle Ihres Routers\n3. Wenn sich die IP geandert hat, konfigurieren Sie die Integration mit der neuen Adresse neu"
     },
     "recovery_success": {
       "title": "{device_name} ist wieder erreichbar",
-      "description": "Ihr Elios4You-Gerat antwortet wieder.\n\n**Fehler begann:** {started_at}\n**Skript ausgefuhrt:** {script_executed_at}\n**Wiederherstellungszeit:** {ended_at}\n**Gesamtausfallzeit:** {downtime}\n\nDas Wiederherstellungsskript **{script_name}** wurde ausgefuhrt."
+      "description": "Ihr FebosHP-Gerat antwortet wieder.\n\n**Fehler begann:** {started_at}\n**Skript ausgefuhrt:** {script_executed_at}\n**Wiederherstellungszeit:** {ended_at}\n**Gesamtausfallzeit:** {downtime}\n\nDas Wiederherstellungsskript **{script_name}** wurde ausgefuhrt."
     },
     "recovery_success_no_script": {
       "title": "{device_name} ist wieder erreichbar",
-      "description": "Ihr Elios4You-Gerat antwortet wieder.\n\n**Fehler begann:** {started_at}\n**Wiederherstellungszeit:** {ended_at}\n**Gesamtausfallzeit:** {downtime}"
+      "description": "Ihr FebosHP-Gerat antwortet wieder.\n\n**Fehler begann:** {started_at}\n**Wiederherstellungszeit:** {ended_at}\n**Gesamtausfallzeit:** {downtime}"
     }
   },
   "exceptions": {
     "telnet_connection_error": {
-      "message": "Verbindung zum Elios4You-Gerat unter {host}:{port} fehlgeschlagen (Zeitlimit: {timeout}s)"
+      "message": "Verbindung zum FebosHP-Gerat unter {host}:{port} fehlgeschlagen (Zeitlimit: {timeout}s)"
     },
     "telnet_command_error": {
       "message": "Telnet-Befehl {command} konnte nicht ausgefuhrt werden"

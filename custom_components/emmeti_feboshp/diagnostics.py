@@ -1,6 +1,6 @@
-"""Diagnostics support for 4-noks Elios4You.
+"""Diagnostics support for Emmeti Febos HP.
 
-https://github.com/alexdelprete/ha-4noks-elios4you
+https://github.com/teejay-87/ha-emmeti-feboshp
 """
 
 from typing import Any
@@ -8,9 +8,9 @@ from typing import Any
 from homeassistant.components.diagnostics import async_redact_data
 from homeassistant.core import HomeAssistant
 
-from . import Elios4YouConfigEntry
+from . import FebosHPConfigEntry
 from .const import CONF_HOST, CONF_NAME, CONF_PORT, CONF_SCAN_INTERVAL, DOMAIN, VERSION
-from .coordinator import Elios4YouCoordinator
+from .coordinator import FebosHPCoordinator
 
 # Keys to redact from diagnostics output
 TO_REDACT = {
@@ -22,10 +22,10 @@ TO_REDACT = {
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, config_entry: Elios4YouConfigEntry
+    hass: HomeAssistant, config_entry: FebosHPConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
-    coordinator: Elios4YouCoordinator = config_entry.runtime_data.coordinator
+    coordinator: FebosHPCoordinator = config_entry.runtime_data.coordinator
 
     # Gather configuration data
     config_data = {

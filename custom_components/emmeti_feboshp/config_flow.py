@@ -1,6 +1,6 @@
-"""Config Flow for 4-noks Elios4You.
+"""Config Flow for Emmeti Febos HP.
 
-https://github.com/alexdelprete/ha-4noks-elios4you
+https://github.com/teejay-87/ha-emmeti-feboshp
 """
 
 import logging
@@ -25,7 +25,7 @@ from homeassistant.helpers.selector import (
     NumberSelectorMode,
 )
 
-from .api import Elios4YouAPI, TelnetCommandError, TelnetConnectionError
+from .api import FebosHPAPI, TelnetCommandError, TelnetConnectionError
 from .const import (
     CONF_ENABLE_REPAIR_NOTIFICATION,
     CONF_FAILURES_THRESHOLD,
@@ -62,17 +62,17 @@ def get_host_from_config(hass: HomeAssistant) -> set[str | None]:
     }
 
 
-class Elios4YouConfigFlow(ConfigFlow, domain=DOMAIN):
-    """4-noks Elios4You config flow."""
+class FebosHPConfigFlow(ConfigFlow, domain=DOMAIN):
+    """Emmeti Febos HP config flow."""
 
     VERSION = 3
     CONNECTION_CLASS = config_entries.CONN_CLASS_LOCAL_POLL
 
     @staticmethod
     @callback
-    def async_get_options_flow(config_entry: ConfigEntry) -> "Elios4YouOptionsFlow":
+    def async_get_options_flow(config_entry: ConfigEntry) -> "FebosHPOptionsFlow":
         """Initiate Options Flow Instance."""
-        return Elios4YouOptionsFlow()
+        return FebosHPOptionsFlow()
 
     def _host_in_configuration_exists(self, host: str | None) -> bool:
         """Return True if host exists in configuration."""
@@ -89,7 +89,7 @@ class Elios4YouConfigFlow(ConfigFlow, domain=DOMAIN):
         log_debug(_LOGGER, "_test_connection", "Testing connection", host=host, port=port)
         try:
             log_debug(_LOGGER, "_test_connection", "Creating API Client")
-            api = Elios4YouAPI(self.hass, name, host, port)
+            api = FebosHPAPI(self.hass, name, host, port)
             log_debug(_LOGGER, "_test_connection", "Fetching device data")
             await api.async_get_data()
             log_debug(_LOGGER, "_test_connection", "Successfully retrieved device data")
@@ -167,7 +167,7 @@ class Elios4YouConfigFlow(ConfigFlow, domain=DOMAIN):
             ),
             errors=errors,
             description_placeholders={
-                "docs_url": "https://github.com/alexdelprete/ha-4noks-elios4you",
+                "docs_url": "https://github.com/teejay-87/ha-emmeti-feboshp",
             },
         )
 
@@ -248,7 +248,7 @@ class Elios4YouConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class Elios4YouOptionsFlow(OptionsFlowWithReload):
+class FebosHPOptionsFlow(OptionsFlowWithReload):
     """Config flow options handler with auto-reload."""
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:

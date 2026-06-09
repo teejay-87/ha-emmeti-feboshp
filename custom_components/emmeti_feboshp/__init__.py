@@ -1,6 +1,6 @@
-"""4-noks Elios4You integration.
+"""Emmeti Febos HP integration.
 
-https://github.com/alexdelprete/ha-4noks-elios4you
+https://github.com/teejay-87/ha-emmeti-feboshp
 """
 
 from dataclasses import dataclass
@@ -25,7 +25,7 @@ from .const import (
     DOMAIN,
     STARTUP_MESSAGE,
 )
-from .coordinator import Elios4YouCoordinator
+from .coordinator import FebosHPCoordinator
 from .helpers import log_debug, log_error, log_info
 
 _LOGGER = logging.getLogger(__name__)
@@ -33,23 +33,23 @@ _LOGGER = logging.getLogger(__name__)
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.SWITCH]
 
 # The type alias needs to be suffixed with 'ConfigEntry'
-type Elios4YouConfigEntry = ConfigEntry[RuntimeData]
+type FebosHPConfigEntry = ConfigEntry[RuntimeData]
 
 
 @dataclass
 class RuntimeData:
     """Class to hold your data."""
 
-    coordinator: Elios4YouCoordinator
+    coordinator: FebosHPCoordinator
 
 
-async def async_setup_entry(hass: HomeAssistant, config_entry: Elios4YouConfigEntry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, config_entry: FebosHPConfigEntry) -> bool:
     """Set up this integration using UI."""
     log_info(_LOGGER, "async_setup_entry", STARTUP_MESSAGE)
     log_debug(_LOGGER, "async_setup_entry", "Setup config_entry", domain=DOMAIN)
 
     # Initialise the coordinator that manages data updates from the API
-    coordinator = Elios4YouCoordinator(hass, config_entry)
+    coordinator = FebosHPCoordinator(hass, config_entry)
 
     # If the refresh fails, async_config_entry_first_refresh() will
     # raise ConfigEntryNotReady and setup will try again later
@@ -80,7 +80,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: Elios4YouConfigEn
 
 
 @callback
-def async_update_device_registry(hass: HomeAssistant, config_entry: Elios4YouConfigEntry) -> None:
+def async_update_device_registry(hass: HomeAssistant, config_entry: FebosHPConfigEntry) -> None:
     """Manual device registration."""
     coordinator = config_entry.runtime_data.coordinator
     device_registry = dr.async_get(hass)
@@ -125,7 +125,7 @@ async def async_remove_config_entry_device(
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, config_entry: Elios4YouConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, config_entry: FebosHPConfigEntry) -> bool:
     """Unload a config entry."""
     log_debug(_LOGGER, "async_unload_entry", "Unload config_entry: started")
 

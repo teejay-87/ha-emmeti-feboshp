@@ -1,6 +1,6 @@
-"""Switch Platform Device for 4-noks Elios4You.
+"""Switch Platform Device for Emmeti Febos HP.
 
-https://github.com/alexdelprete/ha-4noks-elios4you
+https://github.com/teejay-87/ha-emmeti-feboshp
 """
 
 import asyncio
@@ -13,9 +13,9 @@ from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from . import Elios4YouConfigEntry
+from . import FebosHPConfigEntry
 from .const import DOMAIN, SWITCH_ENTITIES
-from .coordinator import Elios4YouCoordinator
+from .coordinator import FebosHPCoordinator
 from .helpers import log_debug
 
 _LOGGER = logging.getLogger(__name__)
@@ -23,7 +23,7 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: Elios4YouConfigEntry,
+    config_entry: FebosHPConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> bool:
     """Switch Platform setup."""
@@ -36,7 +36,7 @@ async def async_setup_entry(
     # cast each entry to ``dict[str, Any]`` to bypass per-value type narrowing
     # — matches the pattern used in sensor.py.
     switches = [
-        Elios4YouSwitch(
+        FebosHPSwitch(
             coordinator,
             switch_def["name"],
             switch_def["key"],
@@ -53,14 +53,14 @@ async def async_setup_entry(
     return True
 
 
-class Elios4YouSwitch(CoordinatorEntity[Elios4YouCoordinator], SwitchEntity):
+class FebosHPSwitch(CoordinatorEntity[FebosHPCoordinator], SwitchEntity):
     """Switch to set the status of the Wiser Operation Mode (Away/Normal)."""
 
     _attr_has_entity_name = True
 
     def __init__(
         self,
-        coordinator: Elios4YouCoordinator,
+        coordinator: FebosHPCoordinator,
         name: str,
         key: str,
         icon: str,

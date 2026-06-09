@@ -1,10 +1,10 @@
-"""Helper utilities for 4-noks Elios4You integration.
+"""Helper utilities for Emmeti Febos HP integration.
 
 This module provides common utility functions used across the integration,
 including standardized logging helpers that provide consistent formatting
 and context information.
 
-https://github.com/alexdelprete/ha-4noks-elios4you
+https://github.com/teejay-87/ha-emmeti-feboshp
 """
 
 import ipaddress

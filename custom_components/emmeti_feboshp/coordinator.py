@@ -1,6 +1,6 @@
-"""Data Update Coordinator for 4-noks Elios4You.
+"""Data Update Coordinator for Emmeti Febos HP.
 
-https://github.com/alexdelprete/ha-4noks-elios4you
+https://github.com/teejay-87/ha-emmeti-feboshp
 """
 
 from datetime import UTC, datetime, timedelta
@@ -14,7 +14,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
 
-from .api import Elios4YouAPI, TelnetCommandError, TelnetConnectionError
+from .api import FebosHPAPI, TelnetCommandError, TelnetConnectionError
 from .const import (
     CONF_ENABLE_REPAIR_NOTIFICATION,
     CONF_FAILURES_THRESHOLD,
@@ -36,7 +36,7 @@ from .repairs import create_connection_issue, create_recovery_notification, dele
 _LOGGER = logging.getLogger(__name__)
 
 
-class Elios4YouCoordinator(DataUpdateCoordinator[bool]):
+class FebosHPCoordinator(DataUpdateCoordinator[bool]):
     """Class to manage fetching data from the API."""
 
     config_entry: ConfigEntry
@@ -106,7 +106,7 @@ class Elios4YouCoordinator(DataUpdateCoordinator[bool]):
             recovery_script=self._recovery_script,
         )
 
-        self.api = Elios4YouAPI(
+        self.api = FebosHPAPI(
             hass,
             self.conf_name,
             self.conf_host,

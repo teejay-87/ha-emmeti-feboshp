@@ -38,7 +38,7 @@ rules:
     comment: Integration does not define any service actions.
 
   # Rule: The documentation includes a high-level description
-  docs-high-level-description: done # README.md describes Elios4you device
+  docs-high-level-description: done # README.md describes FebosHP device
 
   # Rule: The documentation provides step-by-step installation instructions
   docs-installation-instructions: done # README.md with HACS instructions
@@ -89,7 +89,7 @@ rules:
   entity-unavailable: done # Coordinator handles availability via UpdateFailed
 
   # Rule: Has an integration owner
-  integration-owner: done # @alexdelprete in manifest.json codeowners
+  integration-owner: done # @teejay-87 in manifest.json codeowners
 
   # Rule: If unavailable, log once when unavailable and once when back connected
   log-when-unavailable: done # DataUpdateCoordinator handles this automatically
@@ -137,7 +137,7 @@ rules:
   docs-known-limitations: done # README documents limitations
 
   # Rule: The documentation describes known supported / unsupported devices
-  docs-supported-devices: done # README specifies 4-noks Elios4you device
+  docs-supported-devices: done # README specifies Emmeti Febos HP device
 
   # Rule: The documentation describes the supported functionality
   docs-supported-functions: done # README lists all 41 sensors and relay switch

@@ -2,8 +2,8 @@
   "config": {
     "step": {
       "user": {
-        "title": "Elios4You-yhteyden maaritys",
-        "description": "Jos tarvitset apua maarityksessa, kay osoitteessa: https://github.com/alexdelprete/ha-4noks-elios4you",
+        "title": "FebosHP-yhteyden maaritys",
+        "description": "Jos tarvitset apua maarityksessa, kay osoitteessa: https://github.com/teejay-87/ha-emmeti-feboshp",
         "data": {
           "name": "Laitteen nimi (kaytetaan anturien etuliitteena)",
           "host": "IP tai isantanimi",
@@ -12,7 +12,7 @@
         }
       },
       "reconfigure": {
-        "title": "Maarita Elios4You-yhteys uudelleen",
+        "title": "Maarita FebosHP-yhteys uudelleen",
         "description": "Paivita laitteen yhteysasetukset",
         "data": {
           "name": "Laitteen nimi (kaytetaan anturien etuliitteena)",
@@ -35,7 +35,7 @@
   "options": {
     "step": {
       "init": {
-        "title": "Elios4You-asetukset",
+        "title": "FebosHP-asetukset",
         "description": "Voit maarittaa valinnaisen palautusskriptin, joka suoritetaan kun laite lakkaa vastaamasta. Skripti voi kayttaa seuraavia muuttujia:\n- **device_name**: Laitteen nimi\n- **host**: Laitteen IP-osoite\n- **port**: Laitteen TCP-portti",
         "data": {
           "recovery_script": "Palautusskripti (valinnainen, suoritetaan kun laite ei vastaa)",
@@ -101,20 +101,20 @@
   "issues": {
     "connection_failed": {
       "title": "Yhteyden muodostaminen laitteeseen {device_name} ei onnistu",
-      "description": "Integraatio ei voi muodostaa yhteytta Elios4You-laitteeseesi osoitteessa {host}:{port}.\n\n**Mahdolliset syyt:**\n- Laite on pois paalta tai ei ole yhdistetty verkkoon\n- IP-osoite on muuttunut\n- Palomuuri estaa yhteyden\n- Telnet-portti ei ole kaytettavissa\n\n**Ratkaisemiseksi:**\n1. Tarkista, etta laite on paalla ja yhdistetty verkkoon\n2. Tarkista IP-osoite reitittimesi DHCP-taulukosta\n3. Jos IP on muuttunut, maarita integraatio uudelleen uudella osoitteella"
+      "description": "Integraatio ei voi muodostaa yhteytta FebosHP-laitteeseesi osoitteessa {host}:{port}.\n\n**Mahdolliset syyt:**\n- Laite on pois paalta tai ei ole yhdistetty verkkoon\n- IP-osoite on muuttunut\n- Palomuuri estaa yhteyden\n- Telnet-portti ei ole kaytettavissa\n\n**Ratkaisemiseksi:**\n1. Tarkista, etta laite on paalla ja yhdistetty verkkoon\n2. Tarkista IP-osoite reitittimesi DHCP-taulukosta\n3. Jos IP on muuttunut, maarita integraatio uudelleen uudella osoitteella"
     },
     "recovery_success": {
       "title": "{device_name} on palautunut",
-      "description": "Elios4You-laitteesi vastaa jalkeen.\n\n**Vika alkoi:** {started_at}\n**Skripti suoritettu:** {script_executed_at}\n**Palautumisaika:** {ended_at}\n**Kokonaiskatkosaika:** {downtime}\n\nPalautusskripti **{script_name}** suoritettiin."
+      "description": "FebosHP-laitteesi vastaa jalkeen.\n\n**Vika alkoi:** {started_at}\n**Skripti suoritettu:** {script_executed_at}\n**Palautumisaika:** {ended_at}\n**Kokonaiskatkosaika:** {downtime}\n\nPalautusskripti **{script_name}** suoritettiin."
     },
     "recovery_success_no_script": {
       "title": "{device_name} on palautunut",
-      "description": "Elios4You-laitteesi vastaa jalkeen.\n\n**Vika alkoi:** {started_at}\n**Palautumisaika:** {ended_at}\n**Kokonaiskatkosaika:** {downtime}"
+      "description": "FebosHP-laitteesi vastaa jalkeen.\n\n**Vika alkoi:** {started_at}\n**Palautumisaika:** {ended_at}\n**Kokonaiskatkosaika:** {downtime}"
     }
   },
   "exceptions": {
     "telnet_connection_error": {
-      "message": "Yhteys Elios4You-laitteeseen osoitteessa {host}:{port} epaonnistui (aikakatkaisu: {timeout}s)"
+      "message": "Yhteys FebosHP-laitteeseen osoitteessa {host}:{port} epaonnistui (aikakatkaisu: {timeout}s)"
     },
     "telnet_command_error": {
       "message": "Telnet-komento {command} epaonnistui"

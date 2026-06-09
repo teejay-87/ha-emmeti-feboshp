@@ -2,8 +2,8 @@
   "config": {
     "step": {
       "user": {
-        "title": "Elios4You-anslutningskonfiguration",
-        "description": "Om du behover hjalp med konfigurationen, besok: https://github.com/alexdelprete/ha-4noks-elios4you",
+        "title": "FebosHP-anslutningskonfiguration",
+        "description": "Om du behover hjalp med konfigurationen, besok: https://github.com/teejay-87/ha-emmeti-feboshp",
         "data": {
           "name": "Enhetsnamn (anvands som sensorprefix)",
           "host": "IP eller vardnamn",
@@ -12,7 +12,7 @@
         }
       },
       "reconfigure": {
-        "title": "Omkonfigurera Elios4You-anslutning",
+        "title": "Omkonfigurera FebosHP-anslutning",
         "description": "Uppdatera enhetens anslutningsinstallningar",
         "data": {
           "name": "Enhetsnamn (anvands som sensorprefix)",
@@ -35,7 +35,7 @@
   "options": {
     "step": {
       "init": {
-        "title": "Elios4You-alternativ",
+        "title": "FebosHP-alternativ",
         "description": "Du kan konfigurera ett valfritt aterstallningsskript som kors nar enheten slutar svara. Skriptet kan anvanda foljande variabler:\n- **device_name**: Enhetens namn\n- **host**: Enhetens IP-adress\n- **port**: Enhetens TCP-port",
         "data": {
           "recovery_script": "Aterstallningsskript (valfritt, kors nar enheten inte svarar)",
@@ -101,20 +101,20 @@
   "issues": {
     "connection_failed": {
       "title": "Kan inte ansluta till {device_name}",
-      "description": "Integrationen kan inte ansluta till din Elios4You-enhet pa {host}:{port}.\n\n**Mojliga orsaker:**\n- Enheten ar avstangd eller inte ansluten till natverket\n- IP-adressen har andrats\n- En brandvagg blockerar anslutningen\n- Telnet-porten ar inte atkomlig\n\n**For att losa:**\n1. Kontrollera att enheten ar paslagan och ansluten till ditt natverk\n2. Verifiera IP-adressen i din routers DHCP-tabell\n3. Om IP har andrats, konfigurera om integrationen med den nya adressen"
+      "description": "Integrationen kan inte ansluta till din FebosHP-enhet pa {host}:{port}.\n\n**Mojliga orsaker:**\n- Enheten ar avstangd eller inte ansluten till natverket\n- IP-adressen har andrats\n- En brandvagg blockerar anslutningen\n- Telnet-porten ar inte atkomlig\n\n**For att losa:**\n1. Kontrollera att enheten ar paslagan och ansluten till ditt natverk\n2. Verifiera IP-adressen i din routers DHCP-tabell\n3. Om IP har andrats, konfigurera om integrationen med den nya adressen"
     },
     "recovery_success": {
       "title": "{device_name} har aterstallts",
-      "description": "Din Elios4You-enhet svarar igen.\n\n**Fel startade:** {started_at}\n**Skript kordes:** {script_executed_at}\n**Aterstallningstid:** {ended_at}\n**Total stillestandstid:** {downtime}\n\nAterstallningsskriptet **{script_name}** kordes."
+      "description": "Din FebosHP-enhet svarar igen.\n\n**Fel startade:** {started_at}\n**Skript kordes:** {script_executed_at}\n**Aterstallningstid:** {ended_at}\n**Total stillestandstid:** {downtime}\n\nAterstallningsskriptet **{script_name}** kordes."
     },
     "recovery_success_no_script": {
       "title": "{device_name} har aterstallts",
-      "description": "Din Elios4You-enhet svarar igen.\n\n**Fel startade:** {started_at}\n**Aterstallningstid:** {ended_at}\n**Total stillestandstid:** {downtime}"
+      "description": "Din FebosHP-enhet svarar igen.\n\n**Fel startade:** {started_at}\n**Aterstallningstid:** {ended_at}\n**Total stillestandstid:** {downtime}"
     }
   },
   "exceptions": {
     "telnet_connection_error": {
-      "message": "Anslutning till Elios4You-enhet pa {host}:{port} misslyckades (timeout: {timeout}s)"
+      "message": "Anslutning till FebosHP-enhet pa {host}:{port} misslyckades (timeout: {timeout}s)"
     },
     "telnet_command_error": {
       "message": "Telnet-kommando {command} kunde inte koras"

@@ -2,8 +2,8 @@
   "config": {
     "step": {
       "user": {
-        "title": "Configuration de la connexion Elios4You",
-        "description": "Si vous avez besoin d'aide pour la configuration, visitez: https://github.com/alexdelprete/ha-4noks-elios4you",
+        "title": "Configuration de la connexion FebosHP",
+        "description": "Si vous avez besoin d'aide pour la configuration, visitez: https://github.com/teejay-87/ha-emmeti-feboshp",
         "data": {
           "name": "Nom de l'appareil (utilise comme prefixe des capteurs)",
           "host": "IP ou nom d'hote",
@@ -12,7 +12,7 @@
         }
       },
       "reconfigure": {
-        "title": "Reconfigurer la connexion Elios4You",
+        "title": "Reconfigurer la connexion FebosHP",
         "description": "Mettre a jour les parametres de connexion de l'appareil",
         "data": {
           "name": "Nom de l'appareil (utilise comme prefixe des capteurs)",
@@ -35,7 +35,7 @@
   "options": {
     "step": {
       "init": {
-        "title": "Options Elios4You",
+        "title": "Options FebosHP",
         "description": "Configurer les options d'execution",
         "data": {
           "scan_interval": "Intervalle d'interrogation en secondes (30-600)",
@@ -101,20 +101,20 @@
   "issues": {
     "connection_failed": {
       "title": "Impossible de se connecter a {device_name}",
-      "description": "L'integration ne peut pas se connecter a votre appareil Elios4You sur {host}:{port}.\n\n**Causes possibles:**\n- L'appareil est eteint ou non connecte au reseau\n- L'adresse IP a change\n- Un pare-feu bloque la connexion\n- Le port Telnet n'est pas accessible\n\n**Pour resoudre:**\n1. Verifiez que l'appareil est allume et connecte a votre reseau\n2. Verifiez l'adresse IP dans la table DHCP de votre routeur\n3. Si l'IP a change, reconfigurez l'integration avec la nouvelle adresse"
+      "description": "L'integration ne peut pas se connecter a votre appareil FebosHP sur {host}:{port}.\n\n**Causes possibles:**\n- L'appareil est eteint ou non connecte au reseau\n- L'adresse IP a change\n- Un pare-feu bloque la connexion\n- Le port Telnet n'est pas accessible\n\n**Pour resoudre:**\n1. Verifiez que l'appareil est allume et connecte a votre reseau\n2. Verifiez l'adresse IP dans la table DHCP de votre routeur\n3. Si l'IP a change, reconfigurez l'integration avec la nouvelle adresse"
     },
     "recovery_success": {
       "title": "{device_name} a recupere",
-      "description": "Votre appareil Elios4You repond a nouveau.\n\n**Debut de la panne:** {started_at}\n**Script execute:** {script_executed_at}\n**Heure de recuperation:** {ended_at}\n**Temps d'arret total:** {downtime}\n\nLe script de recuperation **{script_name}** a ete execute."
+      "description": "Votre appareil FebosHP repond a nouveau.\n\n**Debut de la panne:** {started_at}\n**Script execute:** {script_executed_at}\n**Heure de recuperation:** {ended_at}\n**Temps d'arret total:** {downtime}\n\nLe script de recuperation **{script_name}** a ete execute."
     },
     "recovery_success_no_script": {
       "title": "{device_name} a recupere",
-      "description": "Votre appareil Elios4You repond a nouveau.\n\n**Debut de la panne:** {started_at}\n**Heure de recuperation:** {ended_at}\n**Temps d'arret total:** {downtime}"
+      "description": "Votre appareil FebosHP repond a nouveau.\n\n**Debut de la panne:** {started_at}\n**Heure de recuperation:** {ended_at}\n**Temps d'arret total:** {downtime}"
     }
   },
   "exceptions": {
     "telnet_connection_error": {
-      "message": "Echec de la connexion a l'appareil Elios4You sur {host}:{port} (delai: {timeout}s)"
+      "message": "Echec de la connexion a l'appareil FebosHP sur {host}:{port} (delai: {timeout}s)"
     },
     "telnet_command_error": {
       "message": "La commande Telnet {command} n'a pas pu etre executee"

@@ -1,6 +1,6 @@
-"""Sensor Platform Device for 4-noks Elios4You.
+"""Sensor Platform Device for Emmeti Febos HP.
 
-https://github.com/alexdelprete/ha-4noks-elios4you
+https://github.com/teejay-87/ha-emmeti-feboshp
 """
 
 import logging
@@ -13,9 +13,9 @@ from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from . import Elios4YouConfigEntry
+from . import FebosHPConfigEntry
 from .const import CONF_NAME, DOMAIN, SENSOR_ENTITIES
-from .coordinator import Elios4YouCoordinator
+from .coordinator import FebosHPCoordinator
 from .helpers import log_debug
 
 _LOGGER = logging.getLogger(__name__)
@@ -23,7 +23,7 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: Elios4YouConfigEntry,
+    config_entry: FebosHPConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Sensor Platform setup."""
@@ -47,7 +47,7 @@ async def async_setup_entry(
         sensor_def = cast(dict[str, Any], sensor)
         if coordinator.api.data[sensor_def["key"]] is not None:
             sensors.append(
-                Elios4YouSensor(
+                FebosHPSensor(
                     coordinator,
                     sensor_def["name"],
                     sensor_def["key"],
@@ -62,14 +62,14 @@ async def async_setup_entry(
     async_add_entities(sensors)
 
 
-class Elios4YouSensor(CoordinatorEntity[Elios4YouCoordinator], SensorEntity):
-    """Representation of an Elios4You sensor."""
+class FebosHPSensor(CoordinatorEntity[FebosHPCoordinator], SensorEntity):
+    """Representation of a FebosHP sensor."""
 
     _attr_has_entity_name = True
 
     def __init__(
         self,
-        coordinator: Elios4YouCoordinator,
+        coordinator: FebosHPCoordinator,
         name: str,
         key: str,
         icon: str,

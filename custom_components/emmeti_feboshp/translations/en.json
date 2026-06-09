@@ -2,7 +2,7 @@
   "config": {
     "step": {
       "user": {
-        "title": "Elios4You Connection Configuration",
+        "title": "FebosHP Connection Configuration",
         "description": "If you need help with the configuration go to: {docs_url}",
         "data": {
           "name": "Custom Name of the device (used for sensors' prefix)",
@@ -12,7 +12,7 @@
         }
       },
       "reconfigure": {
-        "title": "Reconfigure Elios4You Connection",
+        "title": "Reconfigure FebosHP Connection",
         "description": "Update connection settings for the device",
         "data": {
           "name": "Custom Name of the device (used for sensors' prefix)",
@@ -35,7 +35,7 @@
   "options": {
     "step": {
       "init": {
-        "title": "Elios4You Options",
+        "title": "FebosHP Options",
         "description": "Configure runtime options.\n\n**Recovery Script Variables:**\nWhen configured, the recovery script receives these variables:\n- `device_name`: Device name\n- `host`: IP address/hostname\n- `port`: TCP port\n- `serial_number`: Device serial number\n- `mac_address`: Device MAC address\n- `failures_count`: Number of consecutive failures",
         "data": {
           "scan_interval": "Polling Period in seconds (30-600)",
@@ -113,15 +113,15 @@
   "issues": {
     "connection_failed": {
       "title": "{device_name} is not responding",
-      "description": "The integration cannot communicate with your Elios4You device at {host}:{port}.\n\n**Possible causes:**\n- The device is powered off or not connected to the network\n- The device is connected but not responding to commands (device may need a restart)\n- The IP address has changed\n- A firewall is blocking the connection\n- The Telnet port is not accessible\n\n**To resolve:**\n1. Check that the device is powered on and connected to your network\n2. Try restarting the device (power cycle)\n3. Verify the IP address in your router's DHCP table\n4. If the IP has changed, reconfigure the integration with the new address"
+      "description": "The integration cannot communicate with your FebosHP device at {host}:{port}.\n\n**Possible causes:**\n- The device is powered off or not connected to the network\n- The device is connected but not responding to commands (device may need a restart)\n- The IP address has changed\n- A firewall is blocking the connection\n- The Telnet port is not accessible\n\n**To resolve:**\n1. Check that the device is powered on and connected to your network\n2. Try restarting the device (power cycle)\n3. Verify the IP address in your router's DHCP table\n4. If the IP has changed, reconfigure the integration with the new address"
     },
     "recovery_success": {
       "title": "{device_name} has recovered",
-      "description": "Your Elios4You device is now responding again.\n\n**Failure started:** {started_at}\n**Script executed:** {script_executed_at}\n**Recovery time:** {ended_at}\n**Total downtime:** {downtime}\n\nThe recovery script **{script_name}** was executed."
+      "description": "Your FebosHP device is now responding again.\n\n**Failure started:** {started_at}\n**Script executed:** {script_executed_at}\n**Recovery time:** {ended_at}\n**Total downtime:** {downtime}\n\nThe recovery script **{script_name}** was executed."
     },
     "recovery_success_no_script": {
       "title": "{device_name} has recovered",
-      "description": "Your Elios4You device is now responding again.\n\n**Failure started:** {started_at}\n**Recovery time:** {ended_at}\n**Total downtime:** {downtime}"
+      "description": "Your FebosHP device is now responding again.\n\n**Failure started:** {started_at}\n**Recovery time:** {ended_at}\n**Total downtime:** {downtime}"
     }
   },
   "exceptions": {
@@ -129,7 +129,7 @@
       "message": "Timeout connecting to {device_name}"
     },
     "telnet_connection_error": {
-      "message": "Failed to connect to Elios4You device at {host}:{port} (timeout: {timeout}s)"
+      "message": "Failed to connect to FebosHP device at {host}:{port} (timeout: {timeout}s)"
     },
     "telnet_command_error": {
       "message": "Telnet command {command} failed to execute"

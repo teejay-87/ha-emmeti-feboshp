@@ -1,10 +1,10 @@
-"""Connection manager for 4-noks Elios4you telnet device.
+"""Connection manager for Emmeti Febos HP telnet device.
 
 Owns the single TCP/telnet connection to the device, serializes all command
 execution, implements adaptive backoff to spare the fragile embedded device,
 and exposes metrics for diagnostic entities.
 
-The Elios4You has a small embedded TCP stack with very few socket slots
+The FebosHP has a small embedded TCP stack with very few socket slots
 (typically 1-4). Hammering it with reconnects or retry storms causes the
 device to become unresponsive ("deaf") until its WiFi stack is reset. This
 manager exists to make connection handling deliberate, observable, and
@@ -45,7 +45,7 @@ Failure handling
   immediately without touching the network. The coordinator's normal
   polling cadence then provides natural rate-limiting.
 
-https://github.com/alexdelprete/ha-4noks-elios4you
+https://github.com/teejay-87/ha-emmeti-feboshp
 """
 
 from __future__ import annotations
@@ -173,9 +173,9 @@ class ConnectionMetrics:
 
 
 class ConnectionManager:
-    """Owns the single telnetlib3 connection to one Elios4you device."""
+    """Owns the single telnetlib3 connection to one FebosHP device."""
 
-    # Defaults tuned for the Elios4You's fragile TCP stack and a 60 s scan
+    # Defaults tuned for the FebosHP's fragile TCP stack and a 60 s scan
     # interval. See module docstring for rationale.
     DEFAULT_CONNECT_TIMEOUT: float = 5.0
     DEFAULT_READ_TIMEOUT: float = 5.0
@@ -187,7 +187,7 @@ class ConnectionManager:
     DEFAULT_BACKOFF_INITIAL: float = 5.0
     DEFAULT_BACKOFF_MAX: float = 60.0
 
-    # telnetlib3 negotiation timings — Elios4You doesn't really negotiate, so
+    # telnetlib3 negotiation timings — FebosHP doesn't really negotiate, so
     # keep these short to avoid adding latency to every connect.
     CONNECT_MINWAIT: float = 0.1
     CONNECT_MAXWAIT: float = 0.5
@@ -599,7 +599,7 @@ class ConnectionManager:
         """Close the connection. RST on error paths, FIN on graceful unload.
 
         ``force_abort=True`` calls ``transport.abort()`` which sends a TCP
-        RST immediately — critical on the Elios4You because graceful FIN
+        RST immediately — critical on the FebosHP because graceful FIN
         leaves the device's socket slot in CLOSE_WAIT for its (long) idle
         timeout, eventually exhausting the socket table.
 

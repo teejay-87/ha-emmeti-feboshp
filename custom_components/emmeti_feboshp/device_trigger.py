@@ -1,6 +1,6 @@
-"""Device triggers for 4-noks Elios4You.
+"""Device triggers for Emmeti Febos HP.
 
-https://github.com/alexdelprete/ha-4noks-elios4you
+https://github.com/teejay-87/ha-emmeti-feboshp
 """
 
 from __future__ import annotations

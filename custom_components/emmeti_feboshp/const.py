@@ -1,6 +1,6 @@
-"""Constants for 4-noks Elios4You.
+"""Constants for Emmeti Febos HP.
 
-https://github.com/alexdelprete/ha-4noks-elios4you
+https://github.com/teejay-87/ha-emmeti-feboshp
 """
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
@@ -8,18 +8,18 @@ from homeassistant.components.switch import SwitchDeviceClass
 from homeassistant.const import UnitOfEnergy, UnitOfPower
 
 # Base component constants
-NAME = "4-noks Elios4you integration"
-DOMAIN = "4noks_elios4you"
+NAME = "Emmeti Febos HP integration"
+DOMAIN = "emmeti_feboshp"
 VERSION = "1.3.2-beta.1"
-ATTRIBUTION = "by @alexdelprete"
-ISSUE_URL = "https://github.com/alexdelprete/ha-4noks-elios4you/issues"
+ATTRIBUTION = "by @teejay-87, based on ha-4noks-elios4you by @alexdelprete"
+ISSUE_URL = "https://github.com/teejay-87/ha-emmeti-feboshp/issues"
 
 # Configuration and options
 CONF_NAME = "name"
 CONF_HOST = "host"
 CONF_PORT = "port"
 CONF_SCAN_INTERVAL = "scan_interval"
-DEFAULT_NAME = "Elios4you"
+DEFAULT_NAME = "FebosHP"
 DEFAULT_PORT = 5001
 DEFAULT_SCAN_INTERVAL = 60
 MIN_SCAN_INTERVAL = 10
@@ -43,8 +43,8 @@ MAX_FAILURES_THRESHOLD = 10
 
 # Notification IDs
 NOTIFICATION_RECOVERY = "recovery"
-MANUFACTURER = "4-noks"
-MODEL = "Elios4you"
+MANUFACTURER = "Emmeti"
+MODEL = "FebosHP"
 STARTUP_MESSAGE = f"""
 -------------------------------------------------------------------
 {NAME} - Version {VERSION}
