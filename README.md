@@ -1,46 +1,56 @@
-# HA Custom Component for 4-noks Elios4you energy monitoring device
+# Emmeti FEBOS-HP Home Assistant Integration
 
-<!-- BEGIN SHARED:repo-sync:badges -->
-<!-- Synced by repo-sync on 2026-02-20 -->
+Home Assistant custom integration for the Emmeti FEBOS-HP energy monitoring and heat pump management system.
 
-[![GitHub Release](https://img.shields.io/github/v/release/alexdelprete/ha-4noks-elios4you?style=for-the-badge)](https://github.com/alexdelprete/ha-4noks-elios4you/releases)
-[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-donate-yellow?style=for-the-badge&logo=buy-me-a-coffee)](https://www.buymeacoffee.com/alexdelprete)
-[![Tests](https://img.shields.io/github/actions/workflow/status/alexdelprete/ha-4noks-elios4you/test.yml?style=for-the-badge&label=Tests)](https://github.com/alexdelprete/ha-4noks-elios4you/actions/workflows/test.yml)
-[![Coverage](https://img.shields.io/codecov/c/github/alexdelprete/ha-4noks-elios4you?style=for-the-badge)](https://codecov.io/gh/alexdelprete/ha-4noks-elios4you)
-[![GitHub Downloads](https://img.shields.io/github/downloads/alexdelprete/ha-4noks-elios4you/total?style=for-the-badge)](https://github.com/alexdelprete/ha-4noks-elios4you/releases)
 
-<!-- END SHARED:repo-sync:badges -->
+## Disclaimer
 
-_This project is not endorsed by, directly affiliated with, maintained, authorized, or sponsored by 4-noks / Astrel Group_
+This project is an independent, community-developed Home Assistant integration.
+
+This project is not endorsed by, directly affiliated with, maintained, authorized, or sponsored by 4-noks, EMMETI, or any related company. All product names, trademarks, and registered trademarks are the property of their respective owners.
+
+This software is provided for educational and interoperability purposes only.
+
+By installing and using this integration, you acknowledge that it communicates directly with the FEBOS-HP device and may read and modify configuration parameters of the connected system. Incorrect configuration, software defects, communication errors, hardware incompatibilities, or unforeseen circumstances may result in service interruptions, equipment malfunction, loss of data, reduced performance, increased energy consumption, or physical damage to devices or property.
+
+Use this software entirely at your own risk. Always verify any configuration changes before applying them to a production system.
+
+The author(s) and contributor(s) assume no responsibility or liability for any direct, indirect, incidental, consequential, special, exemplary, or punitive damages, including but not limited to equipment damage, property damage, financial loss, loss of data, system downtime, or personal injury arising from the use of this software.
+
+If you are not comfortable accepting these risks, do not install or use this integration.
+
 
 ## Introduction
 
-HA Custom Component to integrate data from
-[4-noks Elios4you](https://www.4-noks.com/product-categories/solar-photovoltaic-en/elios4you-en/?lang=en)
-products.
-Tested personally on my
-[Elios4you Pro](https://www.4-noks.com/shop/elios4you-en/elios4you-pro/?lang=en)
-to monitor tha main 3-phase 6kw line, plus my 7.5kW photovoltaic system.
+HA Custom Component for interoperability with the FEBOS-HP device by [EMMETI](https://emmeti.com/).  
+This is typically associated with a MIRAI-SMI heat pump and, optionally, an ECO HOT WATER DHW system.  
+Tested personally on my FEBOS-HP device with the above configuration and a 3 kWp photovoltaic system.
 
-![image](https://github.com/alexdelprete/ha-4noks-elios4you/assets/7027842/70bb7791-8d01-4fc2-bef6-9a9110558c0b)
+![image](assets/febos-device.jpg)
 
-Elio4you is a great product, it provides very reliable measurements, but it has no documented
-local API to get the energy data. Luckily, 3y ago I found
-[this great article](https://www.hackster.io/daveVertu/reverse-engineering-elios4you-photovoltaic-monitoring-device-458aa0)
-by Davide Vertuani, that reversed-engineered how the official mobile app communicated with the
-device to fetch data, and found out it's a tcp connection on port 5001, through which the app
-sent specific commands to which the device replies with data. That was a great find by Davide,
-and I initially used Node-RED to create a quick integration like Davide suggested in the article:
-I completed a full integration in 1 day and was rock solid, Node-RED is fantastic. :)
+I have been looking for a way to integrate this system into Home Assistant for a long time.  
+Recently, due to issues with the official application, I tried again. I started by port-scanning the device IP and found that it exposes port 5001. I tried communicating with it via PuTTY, with little success.  
 
-![image](https://github.com/alexdelprete/ha-4noks-elios4you/assets/7027842/46eb022f-1da0-48eb-ad70-46832bfa2f4e)
+So I decided to look inside the Android application, where I found references to "Elios4You". I then searched the internet and discovered [a very similar device](https://www.4-noks.com/product-categories/solar-photovoltaic-en/elios4you-en/?lang=en) by 4-noks.
 
-One month ago I decided to port the Node-RED integration to an HA Custom Component, because in
-the last 2 years I developed my first HA component to monitor ABB/FIMER inverters, and now I'm
-quite knowledgable on custom component developement (learned a lot thanks to the dev community
-and studying some excellent integrations).
+I later found that an integration already existed for that device, [ha-4noks-elios4you](https://github.com/alexdelprete/ha-4noks-elios4you) by @alexdelprete, itself based on an article by Davide Vertuani, who reverse-engineered how the official mobile app communicates with the device to fetch data.
 
-So finally here we are with the first official version of the HA custom integration for Elios4you devices. :)
+If I'm not mistaken, Elios4You only exposes data, except for the possibility to control a relay, while the FEBOS-HP also allows you to manage the heat pump and DHW system.
+
+I tried the integration above and was immediately able to connect to my device.
+So I forked the repo and started adding support for reading data not present in Elios4You, as well as writing data to the bus in order to change heat pump configuration.
+
+![image](assets/entity-card.png)
+![image](assets/power-flow-card-plus.png)
+
+---
+
+> **Note**
+>
+> Most of the information that follows is taken from the original repository.  
+> Any additional notes, modifications, or observations specific to this fork are explicitly marked as _**(note by @teejay-87)**_.
+
+---
 
 ### Features
 
@@ -65,7 +75,7 @@ The integration is split into two layers that talk to the device via `telnetlib3
 - **`connection_manager.py`** — owns the single TCP connection to the device, serialises every
   command, and decides when to reconnect, retry, abort, or back off.
 
-The split exists because the Elios4you's embedded TCP stack has very few socket slots and
+The split exists because the FebosHP's embedded TCP stack has very few socket slots and
 becomes unresponsive ("deaf") if it's hammered with reconnects. The `ConnectionManager` enforces
 gentle behaviour through an explicit state machine
 (`DISCONNECTED → CONNECTING → READY → BACKOFF`, terminal `CLOSED` on unload):
@@ -88,11 +98,12 @@ gentle behaviour through an explicit state machine
 
 ### Known Limitations
 
-- **Single device per integration instance**: Each Elios4you device requires a separate
+- **Single device per integration instance**: Each FebosHP device requires a separate
   integration instance. To monitor multiple devices, add the integration multiple times.
 
-<!-- BEGIN SHARED:repo-sync:installation -->
-<!-- Synced by repo-sync on 2026-02-20 -->
+  _**(note by @teejay-87)**_  
+  Due to the reasons above, the connection in indirect mode to the FEBOS-HP is inhibited while the integration is active (the connection through 4-cloud still works). For this reason, I have added a pause switch that temporarily disconnects the integration from the device, so you can still use the official app.
+
 
 ## Installation
 
@@ -102,42 +113,17 @@ gentle behaviour through an explicit state machine
 1. Click on "Integrations"
 1. Click the three dots menu in the top right corner
 1. Select "Custom repositories"
-1. Add `https://github.com/alexdelprete/ha-4noks-elios4you` as an Integration
+1. Add `https://github.com/teejay-87/ha-emmeti-feboshp` as an Integration
 1. Click "Download" and install the integration
 1. Restart Home Assistant
 
 ### Manual Installation
 
-1. Download the latest release from [GitHub Releases](https://github.com/alexdelprete/ha-4noks-elios4you/releases)
-1. Extract the `custom_components/4noks_elios4you` folder
+1. Download the [repo code](https://github.com/teejay-87/ha-emmeti-feboshp/archive/refs/heads/main.zip)
+1. Extract the `custom_components/ha-emmeti-feboshp` folder
 1. Copy it to your Home Assistant `config/custom_components/` directory
 1. Restart Home Assistant
 
-<!-- END SHARED:repo-sync:installation -->
-
-## Installation through HACS
-
-This integration is available in [HACS][hacs] official repository. Click this button to open
-HA directly on the integration page so you can easily install it:
-
-[![Quick installation link](https://my.home-assistant.io/badges/hacs_repository.svg)][my-hacs]
-
-1. Either click the button above, or navigate to HACS in Home Assistant and:
-   - 'Explore & Download Repositories'
-   - Search for '4-noks Elios4You'
-   - Download
-2. Restart Home Assistant
-3. Go to Settings > Devices and Services > Add Integration
-4. Search for and select '4-noks Elios4You' (if the integration is not found, do a hard-refresh (ctrl+F5) in the browser)
-5. Proceed with the configuration
-
-## Manual Installation
-
-Download the source code archive from the release page. Unpack the archive and copy the
-contents of custom_components folder to your home-assistant config/custom_components folder.
-Restart Home Assistant, and then the integration can be added and configured through the native
-integration setup UI. If you don't see it in the native integrations list, press ctrl-F5 to
-refresh the browser while you're on that page and retry.
 
 ## Configuration
 
@@ -157,49 +143,11 @@ Change runtime options without restarting Home Assistant:
 
 #### Recovery Script
 
-You can configure a script that automatically runs when the device becomes unreachable. This
-is useful for automated recovery actions like restarting your WiFi router or power-cycling
-network equipment.
+You can configure a script that automatically runs when the device becomes unreachable.
 
-**Setup:**
-
-1. Create a script in Home Assistant (e.g., `script.restart_wifi`)
-2. In the integration's Options flow, select the script from the dropdown
-3. When failures exceed the threshold, the script will execute automatically
-
-**Available Variables:**
-
-The script receives these variables that you can use in your automation:
-
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `device_name` | The configured device name | "Elios4you Pro" |
-| `host` | IP address or hostname | "192.168.1.100" |
-| `port` | TCP port number | 5001 |
-| `serial_number` | Device serial number | "E4U123456789" |
-| `mac_address` | Device MAC address | "AA:BB:CC:DD:EE:FF" |
-| `failures_count` | Number of consecutive failures | 3 |
-
-**Example Script:**
-
-```yaml
-script:
-  restart_elios_wifi:
-    alias: "Restart Elios WiFi AP"
-    sequence:
-      - service: switch.turn_off
-        target:
-          entity_id: switch.wifi_ap_power
-      - delay:
-          seconds: 10
-      - service: switch.turn_on
-        target:
-          entity_id: switch.wifi_ap_power
-      - service: notify.mobile_app
-        data:
-          title: "Elios4you Recovery"
-          message: "Restarted WiFi AP for {{ device_name }} after {{ failures_count }} failures"
-```
+_**(note by @teejay-87)**_  
+Note that communication with the FEBOS-HP appears to be quite stable, and I have also made some changes in the stack to ensure connection recovery. I have been using it for several days and have experienced no issues so far.
+However, if your experience is different, please let me know, and refer to the original repository’s [related section](https://github.com/alexdelprete/ha-4noks-elios4you#recovery-script).
 
 ### Reconfigure Flow (3-dot menu > Reconfigure)
 
@@ -219,69 +167,16 @@ Change connection settings - the integration will automatically reload:
 ## Device Triggers
 
 The integration provides device triggers that allow you to create automations based on device
-connection events. These triggers fire when the Elios4you device experiences connectivity
+connection events. These triggers fire when the FEBOS-HP device experiences connectivity
 issues or recovers from them.
 
-### Available Triggers
-
-| Trigger | Description |
-|---------|-------------|
-| **Device unreachable** | Fires when the device cannot be reached on the network (TCP connection failed) |
-| **Device not responding** | Fires when the device is reachable but not responding to telnet commands |
-| **Device recovered** | Fires when the device starts responding again after a failure |
-
-### How to Use Device Triggers
-
-1. Go to **Settings > Automations & Scenes > Create Automation**
-2. Click **Add Trigger** and select **Device**
-3. Select your Elios4you device
-4. Choose from the available triggers (e.g., "Device unreachable")
-
-### Device Trigger Automation Example
-
-Get notified when your Elios4you device goes offline and comes back online:
-
-```yaml
-automation:
-  - alias: "Elios4you Device Offline Alert"
-    trigger:
-      - platform: device
-        domain: 4noks_elios4you
-        device_id: YOUR_DEVICE_ID
-        type: device_unreachable
-    action:
-      - service: notify.mobile_app
-        data:
-          title: "Elios4you Offline"
-          message: "The Elios4you device is unreachable. Check network connection."
-
-  - alias: "Elios4you Device Recovered"
-    trigger:
-      - platform: device
-        domain: 4noks_elios4you
-        device_id: YOUR_DEVICE_ID
-        type: device_recovered
-    action:
-      - service: notify.mobile_app
-        data:
-          title: "Elios4you Online"
-          message: "The Elios4you device is back online and responding."
-```
-
-### Recovery Notifications
-
-When the device recovers from a failure, the integration creates a persistent repair notification with detailed timing information:
-
-- **Failure started**: When the issue began
-- **Script executed**: When the recovery script ran (if configured in options)
-- **Recovery time**: When the device became responsive again
-- **Total downtime**: Duration of the outage (e.g., "5m 23s")
-
-These notifications appear in **Settings > System > Repairs** and require user acknowledgment to dismiss.
+_**(note by @teejay-87)**_  
+Again, I do not expect you to encounter major connection problems.
+If you do, please let me know, and refer to the original repository’s [related section](https://github.com/alexdelprete/ha-4noks-elios4you#device-triggers).
 
 ## Automation Examples
 
-Here are some practical automation examples using the Elios4you sensors.
+Here are some practical automation examples using the FEBOS-HP sensors.
 
 ### Solar Production Alert
 
@@ -292,7 +187,7 @@ automation:
   - alias: "Solar Production Started"
     trigger:
       - platform: numeric_state
-        entity_id: sensor.elios4you_produced_power
+        entity_id: sensor.feboshp_produced_power
         above: 0.1
     condition:
       - condition: sun
@@ -301,7 +196,7 @@ automation:
       - service: notify.mobile_app
         data:
           title: "Solar Production"
-          message: "Solar panels are now producing {{ states('sensor.elios4you_produced_power') }} kW"
+          message: "Solar panels are now producing {{ states('sensor.feboshp_produced_power') }} kW"
 ```
 
 ### High Power Consumption Warning
@@ -313,7 +208,7 @@ automation:
   - alias: "High Power Consumption Alert"
     trigger:
       - platform: numeric_state
-        entity_id: sensor.elios4you_consumed_power
+        entity_id: sensor.feboshp_consumed_power
         above: 5.0
         for:
           minutes: 5
@@ -321,7 +216,7 @@ automation:
       - service: notify.mobile_app
         data:
           title: "High Power Usage"
-          message: "Power consumption is {{ states('sensor.elios4you_consumed_power') }} kW for 5 minutes"
+          message: "Power consumption is {{ states('sensor.feboshp_consumed_power') }} kW for 5 minutes"
 ```
 
 ### Energy Dashboard Integration
@@ -329,9 +224,9 @@ automation:
 Add sensors to the Home Assistant Energy Dashboard:
 
 1. Go to **Settings > Dashboards > Energy**
-2. Under "Solar Panels", add `sensor.elios4you_produced_energy`
-3. Under "Grid consumption", add `sensor.elios4you_bought_energy`
-4. Under "Return to grid", add `sensor.elios4you_sold_energy`
+2. Under "Solar Panels", add `sensor.feboshp_produced_energy`
+3. Under "Grid consumption", add `sensor.feboshp_bought_energy`
+4. Under "Return to grid", add `sensor.feboshp_sold_energy`
 
 ### Daily Energy Summary
 
@@ -348,8 +243,8 @@ automation:
         data:
           title: "Daily Energy Report"
           message: >
-            Today's peak: {{ states('sensor.elios4you_daily_peak') }} kW
-            Self-consumption: {{ states('sensor.elios4you_self_consumed_power') }} kW
+            Today's peak: {{ states('sensor.feboshp_daily_peak') }} kW
+            Self-consumption: {{ states('sensor.feboshp_self_consumed_power') }} kW
 ```
 
 ### Relay Control Based on Production
@@ -362,256 +257,35 @@ automation:
     trigger:
       - platform: template
         value_template: >
-          {{ states('sensor.elios4you_produced_power') | float >
-             states('sensor.elios4you_consumed_power') | float + 1.0 }}
+          {{ states('sensor.feboshp_produced_power') | float >
+             states('sensor.feboshp_consumed_power') | float + 1.0 }}
     action:
       - service: switch.turn_on
         target:
-          entity_id: switch.elios4you_relay
+          entity_id: switch.feboshp_relay
 
   - alias: "Disable Relay on Low Solar"
     trigger:
       - platform: template
         value_template: >
-          {{ states('sensor.elios4you_produced_power') | float <
-             states('sensor.elios4you_consumed_power') | float }}
+          {{ states('sensor.feboshp_produced_power') | float <
+             states('sensor.feboshp_consumed_power') | float }}
     action:
       - service: switch.turn_off
         target:
-          entity_id: switch.elios4you_relay
+          entity_id: switch.feboshp_relay
 ```
 
 ## Troubleshooting
 
-### Enabling Debug Logging
-
-Add this to your `configuration.yaml` to enable debug logging:
-
-```yaml
-logger:
-  default: info
-  logs:
-    custom_components.4noks_elios4you: debug
-```
-
-Restart Home Assistant and check the logs in **Settings > System > Logs**.
-
-### Getting the Full Debug Log
-
-When reporting issues, a full debug log is essential for diagnosis. Follow these steps to capture a complete log:
-
-#### Step 1: Enable Debug Logging
-
-Add the logger configuration above to your `configuration.yaml` file, then restart Home Assistant.
-
-#### Step 2: Reproduce the Issue
-
-After restart, wait for the issue to occur or manually trigger it. For connection problems,
-this usually happens within 1-2 polling cycles (60-120 seconds by default).
-
-#### Step 3: Download the Full Log
-
-**Method A: Via Home Assistant UI**
-
-1. Go to **Settings > System > Logs**
-2. Click the **Download Full Log** button (top right corner)
-3. Save the `home-assistant.log` file
-
-**Method B: Direct File Access**
-
-Access the log file directly from your Home Assistant config directory:
-
-- **Home Assistant OS/Supervised**: `/config/home-assistant.log`
-- **Docker**: `<config_mount>/home-assistant.log`
-- **Core**: `~/.homeassistant/home-assistant.log`
-
-#### Step 4: Filter Relevant Entries
-
-The full log contains entries from all integrations. To extract only Elios4you entries:
-
-**Linux/macOS:**
-
-```bash
-grep "4noks_elios4you" home-assistant.log > elios4you_debug.log
-```
-
-**Windows PowerShell:**
-
-```powershell
-Select-String -Path home-assistant.log -Pattern "4noks_elios4you" | Out-File elios4you_debug.log
-```
-
-**Windows Command Prompt:**
-
-```cmd
-findstr "4noks_elios4you" home-assistant.log > elios4you_debug.log
-```
-
-#### Understanding Log Messages
-
-The integration uses structured logging with this format:
-
-```text
-(function_name) [context_key=value]: message
-```
-
-**Example log entries:**
-
-```text
-DEBUG (async_get_data): ========== READ CYCLE START ==========
-DEBUG (ConnMgr.transition) [from_state=disconnected, to_state=connecting, reason=open_new]: State change
-DEBUG (ConnMgr._ensure_connected) [host=192.168.1.100, port=5001, timeout=5.0]: Opening new connection
-INFO  (ConnMgr._ensure_connected) [host=192.168.1.100, port=5001]: Connection established
-DEBUG (ConnMgr.execute) [cmd=@dat, state=ready, attempts=2]: Command requested
-DEBUG (ConnMgr._can_reuse) [age_seconds=58.3, reuse_window=90.0]: Connection exceeded reuse window
-DEBUG (ConnMgr._close_safely) [previous_state=ready]: Connection aborted (RST sent)
-WARN  (ConnMgr._record_failure) [consecutive_failures=3, backoff_seconds=5.0, last_error=silent_timeout]: Entering BACKOFF
-ERROR (async_get_data) [host=192.168.1.100]: TelnetConnectionError - Connection timed out
-```
-
-**Key prefixes to look for:**
-
-| Prefix | What it logs |
-|--------|--------------|
-| `(ConnMgr.transition)` | State machine transitions (DISCONNECTED → READY → BACKOFF …) |
-| `(ConnMgr._ensure_connected)` | Connection open / reuse decisions |
-| `(ConnMgr._close_safely)` | Connection close (RST on errors, FIN on unload) |
-| `(ConnMgr.execute)` | Per-command lifecycle: send, retry, success/failure |
-| `(ConnMgr._record_failure)` | Failure counters + entering backoff |
-| `(async_get_data)` | Top-level read cycle (calls @dat / @sta / @inf) |
-| `(telnet_set_relay)` | Relay switch commands |
-| `(async_setup_entry)` | Integration startup |
-| `(async_unload_entry)` | Integration shutdown |
-
-To target only the connection manager (skip the higher-level integration logs):
-
-```yaml
-logger:
-  default: warning
-  logs:
-    custom_components.4noks_elios4you.connection_manager: debug
-```
-
-**Diagnostic sensors (no log analysis required):** the integration exposes 12 sensors under
-the device's Diagnostic section. **Four are enabled by default** so connection health is
-visible out of the box:
-
-- `Connection State` — current link state (`ready` / `connecting` / `backoff` / …).
-- `Connection Consecutive Failures` — failure streak; non-zero means recovery is struggling.
-- `Connection Silent Timeouts` — counts auto-recovered "device went deaf" events. This is the
-  **only** sensor that surfaces them: silent timeouts are retried transparently, so they leave
-  `Connection State` at `ready` and `Connection Consecutive Failures` at `0`. Watch this
-  counter to know whether the device is still going deaf under the hood.
-- `Connection Last Error` — last error message (empty when healthy); the most useful field when
-  filing a bug report.
-
-The remaining eight (`Connection Backoff Remaining`, `Connection Reuse Hits`,
-`Connection Connects Succeeded / Connect Failures`, `Connection Commands Sent / Failed /
-Retried`, `Connection Forced Aborts`) are opt-in — enable them from the device page when you
-want deeper telemetry. They make recurring problems visible without grepping logs.
-
-#### Temporary Debug Logging (No Restart Required)
-
-For quick debugging without restarting, use the **Logger** integration service:
-
-1. Go to **Developer Tools > Services**
-2. Select service: `logger.set_level`
-3. Enter this YAML:
-
-   ```yaml
-   service: logger.set_level
-   data:
-     custom_components.4noks_elios4you: debug
-   ```
-
-4. Click **Call Service**
-
-Debug logging is now enabled until the next restart. To disable:
-
-```yaml
-service: logger.set_level
-data:
-  custom_components.4noks_elios4you: info
-```
-
-### Repair Notifications
-
-The integration uses Home Assistant's repair system to notify you of connection issues. If
-the device becomes unreachable, you'll see a repair notification in
-**Settings > System > Repairs** with troubleshooting steps.
-
-### Common Issues
-
-#### Sensors Show "Unavailable"
-
-**Cause:** The device is not responding to telnet commands.
-
-**Solutions:**
-
-1. Verify the device is powered on and connected to the network
-2. Check that the IP address is correct in the integration configuration
-3. Ensure no firewall is blocking port 5001
-4. Try pinging the device: `ping <device_ip>`
-5. Verify the device's WiFi connection is stable
-
-#### Device Becomes "Deaf" Periodically
-
-**Cause:** The device's embedded system can become overwhelmed by too many connections.
-
-**Solutions:**
-
-1. Ensure only one integration instance is polling the device
-2. Close the official Elios4you mobile app when not in use
-3. Increase the polling interval to 120 seconds or more in Options
-4. Configure a recovery script to restart your WiFi access point
-
-#### Connection Errors After HA Restart
-
-**Cause:** The device may have stale connections from the previous session.
-
-**Solutions:**
-
-1. Wait 2-3 minutes for old connections to time out
-2. If issues persist, power cycle the Elios4you device
-3. Check for other services polling the device (Node-RED, etc.)
-
-### Opening an Issue
-
-If you encounter problems, please open an issue on GitHub with:
-
-1. **Debug logs** - Enable debug logging (see above) and capture relevant log entries
-2. **Diagnostics file** - Download from **Settings > Devices & Services > 4-noks Elios4you > 3-dot menu > Download diagnostics**
-3. **Home Assistant version** - Found in **Settings > About**
-4. **Integration version** - Found in **HACS > 4-noks Elios4you**
-5. **Problem description** - What you expected vs what happened
-
-[Open an issue on GitHub](https://github.com/alexdelprete/ha-4noks-elios4you/issues/new)
+_**(note by @teejay-87)**_  
+Please refer to the original repository’s [related section](https://github.com/alexdelprete/ha-4noks-elios4you#troubleshooting).
 
 ## Development
 
-This project uses a comprehensive test suite with 98% code coverage:
+_**(note by @teejay-87)**_  
+Please refer to the original repository’s [related section](https://github.com/alexdelprete/ha-4noks-elios4you#development).
 
-```bash
-# Install development dependencies
-pip install -e ".[dev]"
-
-# Run tests with coverage
-pytest tests/ --cov=custom_components/4noks_elios4you --cov-report=term-missing -v
-
-# Run linting
-ruff format .
-ruff check . --fix
-```
-
-**CI/CD Workflows:**
-
-- **Tests**: Runs pytest with coverage on every push/PR to master
-- **Lint**: Runs ruff format, ruff check, and ty type checker
-- **Validate**: Runs hassfest and HACS validation
-- **Release**: Automatically creates ZIP on GitHub release publish
-
-<!-- BEGIN SHARED:repo-sync:contributing -->
-<!-- Synced by repo-sync on 2026-02-20 -->
 
 ## Contributing
 
@@ -625,39 +299,7 @@ Contributions are welcome! Please follow these steps:
 1. Push to your branch (`git push origin feature/my-feature`)
 1. Open a Pull Request
 
-Please ensure all CI checks pass before requesting a review.
-
-<!-- END SHARED:repo-sync:contributing -->
-
-## Coffee
-
-_If you like this integration, I'll gladly accept some quality coffee, but please don't feel obliged._ :)
-
-[![BuyMeCoffee][buymecoffee-button]][buymecoffee]
-
-<!-- BEGIN SHARED:repo-sync:license -->
-<!-- Synced by repo-sync on 2026-02-20 -->
 
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-<!-- END SHARED:repo-sync:license -->
-
----
-
-[buymecoffee]: https://www.buymeacoffee.com/alexdelprete
-[buymecoffee-shield]: https://img.shields.io/badge/buy%20me%20a%20coffee-donate-white?style=for-the-badge&logo=buymeacoffee&logoColor=white
-[buymecoffee-button]: https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20coffee&emoji=☕&slug=alexdelprete&button_colour=FFDD00&font_colour=000000&font_family=Lato&outline_colour=000000&coffee_colour=ffffff
-[hacs]: https://hacs.xyz
-[my-hacs]: https://my.home-assistant.io/redirect/hacs_repository/?owner=alexdelprete&repository=ha-4noks-elios4you&category=integration
-[forum-shield]: https://img.shields.io/badge/community-forum-darkred?style=for-the-badge
-[forum]: https://community.home-assistant.io/t/custom-component-4-noks-elios4you-data-integration/692883?u=alexdelprete
-[releases-shield]: https://img.shields.io/github/v/release/alexdelprete/ha-4noks-elios4you?style=for-the-badge&color=darkgreen
-[releases]: https://github.com/alexdelprete/ha-4noks-elios4you/releases
-[tests-shield]: https://img.shields.io/github/actions/workflow/status/alexdelprete/ha-4noks-elios4you/test.yml?style=for-the-badge&label=Tests
-[tests]: https://github.com/alexdelprete/ha-4noks-elios4you/actions/workflows/test.yml
-[coverage-shield]: https://img.shields.io/codecov/c/github/alexdelprete/ha-4noks-elios4you?style=for-the-badge&token=BWMCFFPJ9J
-[coverage]: https://codecov.io/github/alexdelprete/ha-4noks-elios4you
-[downloads-shield]: https://img.shields.io/github/downloads/alexdelprete/ha-4noks-elios4you/total?style=for-the-badge
-[downloads]: https://github.com/alexdelprete/ha-4noks-elios4you/releases
