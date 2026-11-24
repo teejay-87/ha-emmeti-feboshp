@@ -47,6 +47,20 @@
     }
   },
   "entity": {
+    "climate": {
+      "room": {
+        "name": "Termostato ambiente",
+        "state_attributes": {
+          "preset_mode": { "state": { "schedule": "Segui programma" } },
+          "temperature_profile": {
+            "name": "Profilo termico attivo",
+            "state": { "comfort": "Comfort", "eco": "Attenuazione programmata", "sleep": "Attenuazione forzata" }
+          },
+          "comfort_temperature_c": { "name": "Comfort memorizzato (°C)" },
+          "attenuation_c": { "name": "Attenuazione (°C)" }
+        }
+      }
+    },
     "sensor": {
       "produced_power": { "name": "Potenza Prodotta" },
       "consumed_power": { "name": "Potenza Consumata" },

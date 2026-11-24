@@ -7,6 +7,8 @@ from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.components.switch import SwitchDeviceClass
 from homeassistant.const import UnitOfEnergy, UnitOfFrequency, UnitOfPower, UnitOfTemperature
 
+from .room import AMBIENT, EFFECTIVE, NIGHT, POWER, WINTER
+
 # Base component constants
 NAME = "Emmeti Febos HP integration"
 DOMAIN = "emmeti_feboshp"
@@ -77,21 +79,21 @@ HP_SWITCH_ENTITIES = [
         "key": "hp_onoff",
         "icon": "mdi:heat-pump-outline",
         "device_class": SwitchDeviceClass.SWITCH,
-        "register": 16384,
+        "register": POWER,
     },
     {
         "name": "Winter Mode",
         "key": "hp_winter_mode",
         "icon": "mdi:snowflake-thermometer",
         "device_class": SwitchDeviceClass.SWITCH,
-        "register": 16385,
+        "register": WINTER,
     },
     {
         "name": "Night Mode",
         "key": "hp_night_mode",
         "icon": "mdi:weather-night",
         "device_class": SwitchDeviceClass.SWITCH,
-        "register": 16386,
+        "register": NIGHT,
     },
     {
         "name": "Turbo Mode",
@@ -114,7 +116,7 @@ DAM1_REGISTERS = [
     (8987, "hp_water_outlet_temp", 10),
     (8988, "hp_water_inlet_temp", 10),
     (8989, "hp_dhw_setpoint", 10),
-    (8993, "hp_ambient_temp", 10),
+    (AMBIENT, "hp_ambient_temp", 10),
     (8995, "hp_dew_point_temp", 10),
     (8999, "hp_valve_0", None),
     (9000, "hp_valve_1", None),
@@ -131,13 +133,13 @@ DAM1_REGISTERS = [
     (9064, "hp_dam_9064", None),
     (9076, "hp_target_reached", None),
     (9080, "hp_active_profile", None),
-    (9085, "hp_ambient_setpoint", 10),
+    (EFFECTIVE, "hp_ambient_setpoint", 10),
     (9087, "hp_water_target_temp", 10),
     (9088, "hp_water_actual_temp", 10),
     (9091, "hp_compressor_freq", None),
-    (16384, "hp_onoff", None),
-    (16385, "hp_winter_mode", None),
-    (16386, "hp_night_mode", None),
+    (POWER, "hp_onoff", None),
+    (WINTER, "hp_winter_mode", None),
+    (NIGHT, "hp_night_mode", None),
     (16387, "hp_turbo_mode", None),
 ]
 

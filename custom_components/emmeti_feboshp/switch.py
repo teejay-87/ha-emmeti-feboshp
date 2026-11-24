@@ -17,6 +17,7 @@ from . import FebosHPConfigEntry
 from .const import DEFAULT_PAUSE_DURATION, DOMAIN, HP_SWITCH_ENTITIES, SWITCH_ENTITIES
 from .coordinator import FebosHPCoordinator
 from .helpers import log_debug
+from .room import NIGHT, POWER, WINTER
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -255,23 +256,28 @@ class FebosHPRegisterSwitch(CoordinatorEntity[FebosHPCoordinator], SwitchEntity)
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the switch on."""
-        success = await self._coordinator.api.set_hp_register(self._register, 1)
-        if success:
-            self._coordinator.api.data[self._key] = 1
-            log_debug(_LOGGER, "async_turn_on", "HP switch on", key=self._key)
-        else:
-            log_debug(_LOGGER, "async_turn_on", "HP switch on failed", key=self._key)
-        self._handle_coordinator_update()
+        await self._async_set_register(1)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the switch off."""
-        success = await self._coordinator.api.set_hp_register(self._register, 0)
-        if success:
-            self._coordinator.api.data[self._key] = 0
-            log_debug(_LOGGER, "async_turn_off", "HP switch off", key=self._key)
-        else:
-            log_debug(_LOGGER, "async_turn_off", "HP switch off failed", key=self._key)
+        await self._async_set_register(0)
+
+    async def _async_set_register(self, value: int) -> None:
+        api = self.coordinator.api
+        async with api.hp_lock:
+            success = await api.set_hp_register(self._register, value)
+            if success:
+                api.data[self._key] = value
+        log_debug(
+            _LOGGER,
+            "_async_set_register",
+            "HP switch write succeeded" if success else "HP switch write failed",
+            key=self._key,
+            requested_state="on" if value else "off",
+        )
         self._handle_coordinator_update()
+        if success and self._register in (POWER, WINTER, NIGHT) and not self.coordinator.is_paused:
+            await self.coordinator.async_request_refresh()
 
     @property
     def device_info(self) -> DeviceInfo:

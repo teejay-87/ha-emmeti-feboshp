@@ -1,5 +1,12 @@
 {
   "entity": {
+    "climate": {
+      "room": {
+        "state_attributes": {
+          "preset_mode": { "state": { "schedule": "mdi:calendar-clock" } }
+        }
+      }
+    },
     "sensor": {
       "produced_power": {
         "default": "mdi:solar-power-variant-outline"

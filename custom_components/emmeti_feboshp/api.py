@@ -15,6 +15,7 @@ https://github.com/teejay-87/ha-emmeti-feboshp
 
 from __future__ import annotations
 
+import asyncio
 import logging
 
 from homeassistant.core import HomeAssistant
@@ -27,6 +28,7 @@ from .connection_manager import (
 )
 from .const import DAM1_REGISTERS, MANUFACTURER, MODEL
 from .helpers import log_debug
+from .room import RoomState
 
 # Re-export the exception types so existing callers
 # (``coordinator``, ``config_flow``, tests) don't need to change imports.
@@ -57,6 +59,8 @@ class FebosHPAPI:
         self.data: dict[str, int | float | str] = {}
 
         self.connection_manager = ConnectionManager(host=host, port=port)
+        self.hp_lock = asyncio.Lock()
+        self.room: RoomState | None = None
 
         self._init_data_keys()
 
@@ -89,7 +93,7 @@ class FebosHPAPI:
         self._update_diagnostic_data()
 
     async def async_get_data(self) -> bool:
-        """Run one full read cycle: ``@dat`` + ``@sta`` + ``@inf`` + ``@DAM 1``.
+        """Read energy, device information, live HP registers and room settings.
 
         Raises:
             TelnetConnectionError: device unreachable.
@@ -109,8 +113,8 @@ class FebosHPAPI:
             inf = await self._command("@inf")
             self._merge_inf(inf)
 
-            dam1 = await self._command("@DAM 1")
-            self._merge_dam1(dam1)
+            async with self.hp_lock:
+                await self.read_hp_data()
 
             self._update_calculated()
         finally:
@@ -118,6 +122,24 @@ class FebosHPAPI:
 
         log_debug(_LOGGER, "async_get_data", "========== READ CYCLE END (success) ==========")
         return True
+
+    async def read_hp_data(self) -> None:
+        """Refresh both register groups while the caller holds hp_lock."""
+        try:
+            live = await self._command("@DAM 1")
+        except (ConnectionUnavailableError, TelnetConnectionError, TelnetCommandError):
+            self.room = None
+            raise
+        self._merge_dam1(live)
+        try:
+            settings = await self._command("@DAM 2")
+            self.room = RoomState.from_registers(live, settings)
+        except (
+            ConnectionUnavailableError, TelnetConnectionError, TelnetCommandError, KeyError, ValueError
+        ) as err:
+            # Older gateways may still provide valid live sensors and switches.
+            self.room = None
+            log_debug(_LOGGER, "read_hp_data", "Room settings unavailable", error=str(err))
 
     async def telnet_set_relay(self, state: str) -> bool:
         """Set the device relay to ``"on"`` or ``"off"``.

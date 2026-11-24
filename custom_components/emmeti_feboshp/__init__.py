@@ -30,7 +30,7 @@ from .helpers import log_debug, log_error, log_info
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.SWITCH]
+PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.SWITCH, Platform.CLIMATE]
 
 # The type alias needs to be suffixed with 'ConfigEntry'
 type FebosHPConfigEntry = ConfigEntry[RuntimeData]

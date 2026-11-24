@@ -96,6 +96,21 @@ gentle behaviour through an explicit state machine
   aborts, reuse hits, etc.) are exposed as opt-in sensors under the device's Diagnostic
   section so you can watch what the manager is doing without enabling debug logs
 
+### Room thermostat
+
+The room thermostat displays and sets the **effective room target** reported by the heat pump.
+During scheduled or forced attenuation it compensates for the current offset when writing the
+stored comfort temperature. For example, requesting 22 °C during a 1 °C heating setback stores
+23 °C comfort. When the comfort period starts, the target becomes 23 °C. In cooling the offset
+changes sign. The dial limits follow the active profile and the 15–30 °C comfort range.
+
+Choose **Sleep** to force attenuation using the same control as the Night Mode switch.
+Choose **Follow schedule** to release it, including during a scheduled setback. The
+`temperature_profile` attribute reports `comfort`, `eco` (scheduled attenuation), or
+`sleep` (forced attenuation). The thermostat also exposes the stored comfort and attenuation
+in °C. It refreshes the controller readings before setting the temperature and requires a
+consistent profile for that write. Polling and schedule transitions only read the device.
+
 ### Known Limitations
 
 - **Single device per integration instance**: Each FebosHP device requires a separate

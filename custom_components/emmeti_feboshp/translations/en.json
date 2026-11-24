@@ -47,6 +47,20 @@
     }
   },
   "entity": {
+    "climate": {
+      "room": {
+        "name": "Room thermostat",
+        "state_attributes": {
+          "preset_mode": { "state": { "schedule": "Follow schedule" } },
+          "temperature_profile": {
+            "name": "Active temperature profile",
+            "state": { "comfort": "Comfort", "eco": "Scheduled attenuation", "sleep": "Forced attenuation" }
+          },
+          "comfort_temperature_c": { "name": "Stored comfort (°C)" },
+          "attenuation_c": { "name": "Attenuation (°C)" }
+        }
+      }
+    },
     "sensor": {
       "produced_power": { "name": "Power Produced" },
       "consumed_power": { "name": "Power Consumed" },
