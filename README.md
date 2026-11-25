@@ -104,6 +104,9 @@ stored comfort temperature. For example, requesting 22 °C during a 1 °C heatin
 23 °C comfort. When the comfort period starts, the target becomes 23 °C. In cooling the offset
 changes sign. The dial limits follow the active profile and the 15–30 °C comfort range.
 
+While the heat pump is on, the thermostat reports idle when the compressor frequency is 1
+or lower. Above 1 it reports heating in winter mode and cooling in summer mode.
+
 Choose **Sleep** to force attenuation using the same control as the Night Mode switch.
 Choose **Follow schedule** to release it, including during a scheduled setback. The
 `temperature_profile` attribute reports `comfort`, `eco` (scheduled attenuation), or

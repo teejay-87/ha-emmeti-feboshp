@@ -8,6 +8,7 @@ from typing import Any
 from homeassistant.components.climate import ClimateEntity, ClimateEntityFeature, HVACMode
 from homeassistant.components.climate.const import (
     ATTR_HVAC_MODE,
+    HVACAction,
     PRESET_COMFORT,
     PRESET_ECO,
     PRESET_SLEEP,
@@ -67,6 +68,20 @@ class FebosHPRoomClimate(CoordinatorEntity[FebosHPCoordinator], ClimateEntity):
         if not self.api.data[ROOM_FLAG_KEYS[POWER]]:
             return HVACMode.OFF
         return HVACMode.HEAT if self.api.data[ROOM_FLAG_KEYS[WINTER]] else HVACMode.COOL
+
+    @property
+    def hvac_action(self) -> HVACAction | None:
+        """Infer current activity from flags and frequency reported in the same poll."""
+        room = self.api.room
+        if room is None:
+            return None
+        if not room.power:
+            return HVACAction.OFF
+        if room.compressor_frequency is None:
+            return None
+        if room.compressor_frequency <= 1:
+            return HVACAction.IDLE
+        return HVACAction.HEATING if room.winter else HVACAction.COOLING
 
     @property
     def native_current_temperature(self) -> float | None:

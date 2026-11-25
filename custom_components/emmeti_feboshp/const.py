@@ -7,7 +7,7 @@ from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.components.switch import SwitchDeviceClass
 from homeassistant.const import UnitOfEnergy, UnitOfFrequency, UnitOfPower, UnitOfTemperature
 
-from .room import AMBIENT, EFFECTIVE, NIGHT, POWER, ROOM_FLAG_KEYS, WINTER
+from .room import AMBIENT, COMPRESSOR_FREQUENCY, EFFECTIVE, NIGHT, POWER, ROOM_FLAG_KEYS, WINTER
 
 # Base component constants
 NAME = "Emmeti Febos HP integration"
@@ -136,7 +136,7 @@ DAM1_REGISTERS = [
     (EFFECTIVE, "hp_ambient_setpoint", 10),
     (9087, "hp_water_target_temp", 10),
     (9088, "hp_water_actual_temp", 10),
-    (9091, "hp_compressor_freq", None),
+    (COMPRESSOR_FREQUENCY, "hp_compressor_freq", None),
     (POWER, ROOM_FLAG_KEYS[POWER], None),
     (WINTER, ROOM_FLAG_KEYS[WINTER], None),
     (NIGHT, ROOM_FLAG_KEYS[NIGHT], None),

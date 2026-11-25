@@ -5,12 +5,13 @@ from unittest import IsolatedAsyncioTestCase
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from homeassistant.components.climate import HVACMode
+from homeassistant.components.climate.const import HVACAction
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 
 from custom_components.emmeti_feboshp.api import FebosHPAPI
 from custom_components.emmeti_feboshp.climate import FebosHPRoomClimate
 from custom_components.emmeti_feboshp.coordinator import FebosHPCoordinator
-from custom_components.emmeti_feboshp.room import NIGHT, POWER, ROOM_FLAG_KEYS, WINTER
+from custom_components.emmeti_feboshp.room import COMPRESSOR_FREQUENCY, NIGHT, POWER, ROOM_FLAG_KEYS, WINTER
 from custom_components.emmeti_feboshp.switch import FebosHPRegisterSwitch
 
 
@@ -54,6 +55,38 @@ class RoomClimateTests(IsolatedAsyncioTestCase):
         sign = -1 if self.live[16385] else 1
         attenuated = self.scheduled_attenuation or self.live[16386]
         self.live[9085] = self.settings[16440] + (sign * self.settings[16442] if attenuated else 0)
+
+    async def test_hvac_activity_uses_live_compressor_frequency(self):
+        self.assertIsNone(self.climate.hvac_action)
+        for season, mode, active in (
+            (1, HVACMode.HEAT, HVACAction.HEATING),
+            (0, HVACMode.COOL, HVACAction.COOLING),
+        ):
+            self.live[WINTER] = season
+            for frequency, action in ((0, HVACAction.IDLE), (2, active), (1, HVACAction.IDLE)):
+                with self.subTest(mode=mode, frequency=frequency):
+                    self.live[COMPRESSOR_FREQUENCY] = frequency
+                    await self.api.async_get_data()
+                    self.assertEqual(self.climate.hvac_mode, mode)
+                    self.assertEqual(self.climate.hvac_action, action)
+        self.live[POWER] = 0
+        self.live[COMPRESSOR_FREQUENCY] = 2
+        await self.api.async_get_data()
+        self.assertEqual(self.climate.hvac_action, HVACAction.OFF)
+        self.assertEqual(self.writes, [])
+
+    async def test_missing_or_malformed_frequency_clears_only_activity(self):
+        self.live[COMPRESSOR_FREQUENCY] = 12
+        await self.api.async_get_data()
+        self.assertEqual(self.climate.hvac_action, HVACAction.HEATING)
+        del self.live[COMPRESSOR_FREQUENCY]
+        await self.api.async_get_data()
+        self.assertIsNone(self.climate.hvac_action)
+        self.live[COMPRESSOR_FREQUENCY] = "invalid"
+        await self.api.async_get_data()
+        self.assertIsNone(self.climate.hvac_action)
+        self.assertEqual(self.climate.hvac_mode, HVACMode.HEAT)
+        self.assertEqual(self.climate.native_target_temperature, 21)
 
     async def test_winter_setback_and_morning(self):
         await self.api.async_get_data()

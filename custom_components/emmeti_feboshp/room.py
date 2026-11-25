@@ -5,6 +5,7 @@ from math import isfinite
 
 AMBIENT = 8993
 EFFECTIVE = 9085
+COMPRESSOR_FREQUENCY = 9091
 POWER = 16384
 WINTER = 16385
 NIGHT = 16386
@@ -26,12 +27,17 @@ class RoomState:
     effective: int
     comfort: int
     attenuation: int
+    compressor_frequency: int | None = None
 
     @classmethod
     def from_registers(
         cls, live: dict[str, str], settings: dict[str, str], *, changing_season: bool = False
     ) -> "RoomState":
         """Decode the raw replies, without using seeded or previously cached values."""
+        try:
+            compressor_frequency = int(live[str(COMPRESSOR_FREQUENCY)])
+        except (KeyError, ValueError):
+            compressor_frequency = None
         state = cls(
             power=int(live[str(POWER)]),
             winter=int(live[str(WINTER)]),
@@ -40,6 +46,7 @@ class RoomState:
             effective=int(live[str(EFFECTIVE)]),
             comfort=int(settings[str(COMFORT)]),
             attenuation=int(settings[str(ATTENUATION)]),
+            compressor_frequency=compressor_frequency,
         )
         settings_season = int(settings.get(str(WINTER), state.winter))
         if (
