@@ -113,8 +113,9 @@ consistent profile for that write. Polling and schedule transitions only read th
 
 After a successful comfort write, the dial shows the requested effective target immediately.
 The `target_temperature_pending` attribute stays true while the gateway updates its
-comfort and effective registers. If the values still disagree at the first valid poll
-after two minutes, the dial shows the reported target and the integration logs a warning.
+comfort and effective registers. The thermostat checks after two seconds and, if needed,
+checks twice more at two-second intervals. If a valid reading still shows the old values
+after six seconds, the dial shows the reported target and the integration logs a warning.
 
 ### Known Limitations
 

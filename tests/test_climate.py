@@ -16,6 +16,8 @@ class RoomClimateTests(IsolatedAsyncioTestCase):
     def setUp(self):
         self.coordinator = MagicMock()
         self.coordinator.is_paused = False
+        self.background_tasks = []
+        self.coordinator.config_entry.async_create_background_task.side_effect = self.capture_task
         self.api = self.coordinator.api = FebosHPAPI(MagicMock(), "FEBOS", "example.invalid", 5001)
         self.api.connection_manager.execute = AsyncMock(side_effect=self.reply)
         self.coordinator.async_request_refresh = AsyncMock(side_effect=self.api.async_get_data)
@@ -25,6 +27,10 @@ class RoomClimateTests(IsolatedAsyncioTestCase):
         self.writes = []
         self.scheduled_attenuation = True
         self.ignore_write = False
+
+    def capture_task(self, hass, coroutine, name):
+        self.background_tasks.append(coroutine)
+        self.addCleanup(coroutine.close)
 
     async def reply(self, cmd):
         await asyncio.sleep(0)  # Let concurrent service calls interleave if the lock is missing.
@@ -145,18 +151,53 @@ class RoomClimateTests(IsolatedAsyncioTestCase):
         self.assertFalse(self.climate.extra_state_attributes["target_temperature_pending"])
         self.assertEqual(self.writes, [(16440, 230), (16440, 220)])
 
-    async def test_unconfirmed_target_expires_on_poll(self):
+    async def test_first_readback_confirms_after_two_seconds(self):
+        await self.climate.async_set_temperature(temperature=22)
+        self.assertTrue(self.climate.extra_state_attributes["target_temperature_pending"])
+        self.api.connection_manager.execute.reset_mock()
+        with patch("asyncio.sleep", new_callable=AsyncMock) as sleep:
+            await self.background_tasks[0]
+        self.assertEqual([call.args[0] for call in sleep.await_args_list if call.args[0]], [2])
+        self.assertEqual(
+            [call.args[0] for call in self.api.connection_manager.execute.await_args_list],
+            ["@DAM 1", "@DAM 2"],
+        )
+        self.assertFalse(self.climate.extra_state_attributes["target_temperature_pending"])
+        self.assertEqual(self.writes, [(16440, 230)])
+
+    async def test_unconfirmed_target_expires_after_three_readbacks(self):
         self.ignore_write = True
-        with patch("custom_components.emmeti_feboshp.api.monotonic", return_value=100):
+        elapsed = 0
+        delays = []
+
+        async def advance(delay):
+            nonlocal elapsed
+            if delay:
+                delays.append(delay)
+                elapsed += delay
+
+        with patch("custom_components.emmeti_feboshp.api.monotonic", side_effect=lambda: elapsed):
             await self.climate.async_set_temperature(temperature=22)
-        with (
-            patch("custom_components.emmeti_feboshp.api.monotonic", return_value=221),
-            self.assertLogs("custom_components.emmeti_feboshp.api", level="WARNING"),
-        ):
-            await self.api.async_get_data()
+            with (
+                patch("asyncio.sleep", side_effect=advance),
+                self.assertLogs("custom_components.emmeti_feboshp.api", level="WARNING"),
+            ):
+                await self.background_tasks[0]
+        self.assertEqual(delays, [2, 2, 2])
         self.assertEqual(self.climate.native_target_temperature, 21)
         self.assertFalse(self.climate.extra_state_attributes["target_temperature_pending"])
         self.assertEqual(self.writes, [(16440, 230)])
+
+    async def test_superseded_and_paused_readbacks_skip_gateway(self):
+        self.ignore_write = True
+        await self.climate.async_set_temperature(temperature=22)
+        await self.climate.async_set_temperature(temperature=23)
+        self.api.connection_manager.execute.reset_mock()
+        with patch("asyncio.sleep", new_callable=AsyncMock):
+            await self.background_tasks[0]
+            self.coordinator.is_paused = True
+            await self.background_tasks[1]
+        self.api.connection_manager.execute.assert_not_awaited()
 
     async def test_external_adjustment_supersedes_pending_target(self):
         self.ignore_write = True

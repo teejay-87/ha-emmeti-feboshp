@@ -20,6 +20,8 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import FebosHPConfigEntry
+from .api import ROOM_TARGET_CHECK_ATTEMPTS, ROOM_TARGET_CHECK_INTERVAL, PendingRoomTarget
+from .connection_manager import ConnectionManagerError
 from .const import DOMAIN
 from .coordinator import FebosHPCoordinator
 from .room import COMFORT, MAX_COMFORT, MIN_COMFORT, NIGHT, POWER, WINTER, RoomState
@@ -188,5 +190,28 @@ class FebosHPRoomClimate(CoordinatorEntity[FebosHPCoordinator], ClimateEntity):
                 raise ServiceValidationError(str(err)) from err
             if self.coordinator.is_paused:
                 raise HomeAssistantError("FEBOS polling is paused")
+            previous = self.api.pending_room_target
             if not await self.api.set_room_comfort(room, comfort):
                 raise HomeAssistantError(f"FEBOS could not write register {COMFORT}")
+            pending = self.api.pending_room_target
+            if pending is not None and pending is not previous:
+                self.coordinator.config_entry.async_create_background_task(
+                    self.coordinator.hass, self._async_confirm_target(pending), "FEBOS target readback"
+                )
+
+    async def _async_confirm_target(self, pending: PendingRoomTarget) -> None:
+        """Read only the HP groups until this particular write is reconciled."""
+        for _ in range(ROOM_TARGET_CHECK_ATTEMPTS):
+            await asyncio.sleep(ROOM_TARGET_CHECK_INTERVAL)
+            async with self.api.hp_lock:
+                if self.api.pending_room_target is not pending or self.coordinator.is_paused:
+                    return
+                try:
+                    await self.api.read_hp_data()
+                except ConnectionManagerError:
+                    # A read failure leaves the room unavailable. Normal polling handles recovery.
+                    return
+                finally:
+                    self.coordinator.async_update_listeners()
+                if self.api.pending_room_target is not pending:
+                    return

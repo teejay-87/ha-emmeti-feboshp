@@ -43,8 +43,9 @@ __all__ = [
 
 _LOGGER = logging.getLogger(__name__)
 
-# Allow the two DAM snapshots to catch up independently after a comfort write.
-ROOM_TARGET_CONFIRMATION_SECONDS = 120
+# Read both DAM snapshots shortly after a comfort write.
+ROOM_TARGET_CHECK_INTERVAL = 2
+ROOM_TARGET_CHECK_ATTEMPTS = 3
 
 
 @dataclass(frozen=True)
@@ -169,7 +170,7 @@ class FebosHPAPI:
         )
 
     async def set_room_comfort(self, room: RoomState, comfort: int) -> bool:
-        """Write once under hp_lock. Regular polls confirm the comfort and effective targets."""
+        """Write once under hp_lock. Subsequent reads confirm both targets."""
         if comfort == room.comfort:
             return True
         if not await self.set_hp_register(COMFORT, comfort):
@@ -183,7 +184,7 @@ class FebosHPAPI:
             ),
             previous_comfort=previous_comfort | {room.comfort},
             previous_effective=previous_effective | {room.effective},
-            deadline=monotonic() + ROOM_TARGET_CONFIRMATION_SECONDS,
+            deadline=monotonic() + ROOM_TARGET_CHECK_INTERVAL * ROOM_TARGET_CHECK_ATTEMPTS,
         )
         return True
 
