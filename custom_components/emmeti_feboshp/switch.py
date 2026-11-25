@@ -17,7 +17,7 @@ from . import FebosHPConfigEntry
 from .const import DEFAULT_PAUSE_DURATION, DOMAIN, HP_SWITCH_ENTITIES, SWITCH_ENTITIES
 from .coordinator import FebosHPCoordinator
 from .helpers import log_debug
-from .room import NIGHT, POWER, WINTER
+from .room import ROOM_FLAG_KEYS
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -264,10 +264,16 @@ class FebosHPRegisterSwitch(CoordinatorEntity[FebosHPCoordinator], SwitchEntity)
 
     async def _async_set_register(self, value: int) -> None:
         api = self.coordinator.api
+        room_flag = self._register in ROOM_FLAG_KEYS
         async with api.hp_lock:
-            success = await api.set_hp_register(self._register, value)
-            if success:
-                api.data[self._key] = value
+            if room_flag:
+                success = await api.set_room_flag(self._register, value)
+                if success and not self.coordinator.is_paused:
+                    self.coordinator.schedule_room_readback()
+            else:
+                success = await api.set_hp_register(self._register, value)
+                if success:
+                    api.data[self._key] = value
         log_debug(
             _LOGGER,
             "_async_set_register",
@@ -275,9 +281,7 @@ class FebosHPRegisterSwitch(CoordinatorEntity[FebosHPCoordinator], SwitchEntity)
             key=self._key,
             requested_state="on" if value else "off",
         )
-        self._handle_coordinator_update()
-        if success and self._register in (POWER, WINTER, NIGHT) and not self.coordinator.is_paused:
-            await self.coordinator.async_request_refresh()
+        self.coordinator.async_update_listeners()
 
     @property
     def device_info(self) -> DeviceInfo:

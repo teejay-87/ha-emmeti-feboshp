@@ -7,7 +7,7 @@ from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.components.switch import SwitchDeviceClass
 from homeassistant.const import UnitOfEnergy, UnitOfFrequency, UnitOfPower, UnitOfTemperature
 
-from .room import AMBIENT, EFFECTIVE, NIGHT, POWER, WINTER
+from .room import AMBIENT, EFFECTIVE, NIGHT, POWER, ROOM_FLAG_KEYS, WINTER
 
 # Base component constants
 NAME = "Emmeti Febos HP integration"
@@ -76,21 +76,21 @@ SWITCH_ENTITIES = [
 HP_SWITCH_ENTITIES = [
     {
         "name": "Heat Pump",
-        "key": "hp_onoff",
+        "key": ROOM_FLAG_KEYS[POWER],
         "icon": "mdi:heat-pump-outline",
         "device_class": SwitchDeviceClass.SWITCH,
         "register": POWER,
     },
     {
         "name": "Winter Mode",
-        "key": "hp_winter_mode",
+        "key": ROOM_FLAG_KEYS[WINTER],
         "icon": "mdi:snowflake-thermometer",
         "device_class": SwitchDeviceClass.SWITCH,
         "register": WINTER,
     },
     {
         "name": "Night Mode",
-        "key": "hp_night_mode",
+        "key": ROOM_FLAG_KEYS[NIGHT],
         "icon": "mdi:weather-night",
         "device_class": SwitchDeviceClass.SWITCH,
         "register": NIGHT,
@@ -137,9 +137,9 @@ DAM1_REGISTERS = [
     (9087, "hp_water_target_temp", 10),
     (9088, "hp_water_actual_temp", 10),
     (9091, "hp_compressor_freq", None),
-    (POWER, "hp_onoff", None),
-    (WINTER, "hp_winter_mode", None),
-    (NIGHT, "hp_night_mode", None),
+    (POWER, ROOM_FLAG_KEYS[POWER], None),
+    (WINTER, ROOM_FLAG_KEYS[WINTER], None),
+    (NIGHT, ROOM_FLAG_KEYS[NIGHT], None),
     (16387, "hp_turbo_mode", None),
 ]
 

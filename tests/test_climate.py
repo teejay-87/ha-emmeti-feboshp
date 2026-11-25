@@ -9,6 +9,8 @@ from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 
 from custom_components.emmeti_feboshp.api import FebosHPAPI
 from custom_components.emmeti_feboshp.climate import FebosHPRoomClimate
+from custom_components.emmeti_feboshp.coordinator import FebosHPCoordinator
+from custom_components.emmeti_feboshp.room import NIGHT, POWER, ROOM_FLAG_KEYS, WINTER
 from custom_components.emmeti_feboshp.switch import FebosHPRegisterSwitch
 
 
@@ -16,6 +18,8 @@ class RoomClimateTests(IsolatedAsyncioTestCase):
     def setUp(self):
         self.coordinator = MagicMock()
         self.coordinator.is_paused = False
+        self.coordinator.schedule_room_readback = FebosHPCoordinator.schedule_room_readback.__get__(self.coordinator)
+        self.coordinator._async_confirm_room = FebosHPCoordinator._async_confirm_room.__get__(self.coordinator)
         self.background_tasks = []
         self.coordinator.config_entry.async_create_background_task.side_effect = self.capture_task
         self.api = self.coordinator.api = FebosHPAPI(MagicMock(), "FEBOS", "example.invalid", 5001)
@@ -243,3 +247,123 @@ class RoomClimateTests(IsolatedAsyncioTestCase):
         await self.climate.async_turn_on()
         self.assertEqual(self.writes[-2:], [(16384, 0), (16384, 1)])
         self.assertEqual(self.climate.hvac_mode, HVACMode.COOL)
+
+    async def test_each_room_flag_stays_visible_until_confirmed(self):
+        self.ignore_write = True
+        cases = [
+            (self.climate.async_turn_off, (), POWER, 0, HVACMode.OFF, "schedule"),
+            (self.climate.async_turn_on, (), POWER, 1, HVACMode.HEAT, "schedule"),
+            (self.climate.async_set_hvac_mode, (HVACMode.COOL,), WINTER, 0, HVACMode.COOL, "schedule"),
+            (self.climate.async_set_hvac_mode, (HVACMode.HEAT,), WINTER, 1, HVACMode.HEAT, "schedule"),
+            (self.climate.async_set_preset_mode, ("sleep",), NIGHT, 1, HVACMode.HEAT, "sleep"),
+            (self.climate.async_set_preset_mode, ("schedule",), NIGHT, 0, HVACMode.HEAT, "schedule"),
+        ]
+        for action, args, addr, value, mode, preset in cases:
+            with self.subTest(addr=addr, value=value):
+                self.writes.clear()
+                await action(*args)
+                await self.api.async_get_data()  # Both groups still contain the old values.
+                self.assertEqual(self.climate.hvac_mode, mode)
+                self.assertEqual(self.climate.preset_mode, preset)
+                self.assertEqual(self.api.data[ROOM_FLAG_KEYS[addr]], value)
+                self.assertIn(addr, self.api.pending_room_flags)
+                await action(*args)  # Identical request while the first is in flight.
+                self.live[addr] = value
+                self.apply_profile()
+                with patch("asyncio.sleep", new_callable=AsyncMock):
+                    await self.background_tasks[-1]
+                self.assertEqual(self.api.pending_room_flags, {})
+                self.assertEqual(self.writes, [(addr, value)])
+
+    async def test_partial_mode_confirmation_expires_per_register(self):
+        self.live[POWER] = 0
+        self.ignore_write = True
+        elapsed = 0
+
+        async def advance(delay):
+            nonlocal elapsed
+            elapsed += delay
+            if elapsed >= 2:
+                self.live[POWER] = 1
+
+        with patch("custom_components.emmeti_feboshp.api.monotonic", side_effect=lambda: elapsed):
+            await self.climate.async_set_hvac_mode(HVACMode.COOL)
+            self.assertEqual(self.climate.hvac_mode, HVACMode.COOL)
+            with (
+                patch("asyncio.sleep", side_effect=advance),
+                self.assertLogs("custom_components.emmeti_feboshp.api", level="WARNING") as logs,
+            ):
+                await self.background_tasks[0]
+        self.assertEqual(elapsed, 6)
+        self.assertEqual(len(logs.records), 1)
+        self.assertIn(str(WINTER), logs.output[0])
+        self.assertEqual(self.api.pending_room_flags, {})
+        self.assertEqual(self.climate.hvac_mode, HVACMode.HEAT)
+        self.assertEqual(self.writes, [(WINTER, 0), (POWER, 1)])
+
+    async def test_switch_supersedes_climate_while_night_is_pending(self):
+        self.ignore_write = True
+        await self.api.async_get_data()
+        switch = FebosHPRegisterSwitch(self.coordinator, "Night", ROOM_FLAG_KEYS[NIGHT], "", None, NIGHT)
+        await self.climate.async_set_preset_mode("sleep")
+        await switch.async_turn_off()
+        self.live[NIGHT] = 1  # Late echo of the first command.
+        await self.api.async_get_data()
+        self.assertEqual(self.climate.preset_mode, "schedule")
+        self.assertFalse(switch.is_on)
+        self.api.connection_manager.execute.reset_mock()
+        with patch("asyncio.sleep", new_callable=AsyncMock):
+            await self.background_tasks[0]
+            self.api.connection_manager.execute.assert_not_awaited()
+            self.live[NIGHT] = 0
+            await self.background_tasks[1]
+        self.assertEqual(self.writes, [(NIGHT, 1), (NIGHT, 0)])
+        self.assertEqual(self.api.pending_room_flags, {})
+
+    async def test_combined_temperature_waits_for_both_season_snapshots(self):
+        self.settings[WINTER] = 1
+        self.ignore_write = True
+        waits = []
+
+        async def update_registers(delay):
+            if delay:
+                waits.append(delay)
+                self.assertEqual(self.writes, [(WINTER, 0)])
+                self.live[WINTER] = 0
+                if len(waits) == 2:
+                    self.settings[WINTER] = 0
+                    self.apply_profile()
+
+        with patch("asyncio.sleep", side_effect=update_registers):
+            await self.climate.async_set_temperature(hvac_mode=HVACMode.COOL, temperature=22)
+        self.assertEqual(waits, [2, 2])
+        self.assertEqual(self.writes, [(WINTER, 0), (16440, 210)])
+        self.assertEqual(self.climate.native_target_temperature, 22)
+
+    async def test_failed_power_write_still_reconciles_accepted_season(self):
+        self.live[POWER] = 0
+        self.ignore_write = True
+
+        async def reject_power(cmd):
+            if cmd == f"@REG 1 {POWER} 1 1":
+                return f"{cmd}\r\ncommand error\r\n\r\nready...\r\n"
+            return await self.reply(cmd)
+
+        self.api.connection_manager.execute.side_effect = reject_power
+        with self.assertRaisesRegex(HomeAssistantError, str(POWER)):
+            await self.climate.async_set_hvac_mode(HVACMode.COOL)
+        self.assertEqual(self.climate.hvac_mode, HVACMode.OFF)
+        self.assertEqual(set(self.api.pending_room_flags), {WINTER})
+        self.live[WINTER] = 0
+        with patch("asyncio.sleep", new_callable=AsyncMock):
+            await self.background_tasks[0]
+        self.assertEqual(self.api.pending_room_flags, {})
+
+    async def test_unconfirmed_season_skips_dependent_temperature_write(self):
+        self.ignore_write = True
+        with (
+            patch("asyncio.sleep", new_callable=AsyncMock),
+            self.assertRaises(HomeAssistantError),
+        ):
+            await self.climate.async_set_temperature(hvac_mode=HVACMode.COOL, temperature=22)
+        self.assertEqual(self.writes, [(WINTER, 0)])

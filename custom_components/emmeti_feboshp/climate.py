@@ -20,11 +20,10 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import FebosHPConfigEntry
-from .api import ROOM_TARGET_CHECK_ATTEMPTS, ROOM_TARGET_CHECK_INTERVAL, PendingRoomTarget
-from .connection_manager import ConnectionManagerError
+from .api import ROOM_CHECK_ATTEMPTS, ROOM_CHECK_INTERVAL
 from .const import DOMAIN
 from .coordinator import FebosHPCoordinator
-from .room import COMFORT, MAX_COMFORT, MIN_COMFORT, NIGHT, POWER, WINTER, RoomState
+from .room import COMFORT, MAX_COMFORT, MIN_COMFORT, NIGHT, POWER, ROOM_FLAG_KEYS, WINTER, RoomState
 
 PRESET_SCHEDULE = "schedule"
 
@@ -63,11 +62,11 @@ class FebosHPRoomClimate(CoordinatorEntity[FebosHPCoordinator], ClimateEntity):
 
     @property
     def hvac_mode(self) -> HVACMode | None:
-        if (room := self.api.room) is None:
+        if self.api.room is None:
             return None
-        if not room.power:
+        if not self.api.data[ROOM_FLAG_KEYS[POWER]]:
             return HVACMode.OFF
-        return HVACMode.HEAT if room.winter else HVACMode.COOL
+        return HVACMode.HEAT if self.api.data[ROOM_FLAG_KEYS[WINTER]] else HVACMode.COOL
 
     @property
     def native_current_temperature(self) -> float | None:
@@ -95,9 +94,9 @@ class FebosHPRoomClimate(CoordinatorEntity[FebosHPCoordinator], ClimateEntity):
 
     @property
     def preset_mode(self) -> str | None:
-        if (room := self.api.room) is None:
+        if self.api.room is None:
             return None
-        return PRESET_SLEEP if room.night else PRESET_SCHEDULE
+        return PRESET_SLEEP if self.api.data[ROOM_FLAG_KEYS[NIGHT]] else PRESET_SCHEDULE
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -105,10 +104,11 @@ class FebosHPRoomClimate(CoordinatorEntity[FebosHPCoordinator], ClimateEntity):
             return {}
         offset = (self.api.room_for_control or room).offset
         profile = None
-        if offset == 0:
+        night = self.api.data[ROOM_FLAG_KEYS[NIGHT]]
+        if offset == 0 and not night:
             profile = PRESET_COMFORT
-        elif offset is not None:
-            profile = PRESET_SLEEP if room.night else PRESET_ECO
+        elif offset:
+            profile = PRESET_SLEEP if night else PRESET_ECO
         return {
             "target_temperature_pending": self.api.pending_room_target is not None,
             "temperature_profile": profile,
@@ -128,43 +128,37 @@ class FebosHPRoomClimate(CoordinatorEntity[FebosHPCoordinator], ClimateEntity):
         async with self.api.hp_lock:
             if self.coordinator.is_paused:
                 raise HomeAssistantError("FEBOS polling is paused")
+            generation = self.api.room_write_generation
             try:
                 yield await self._read_room()
             finally:
                 self.coordinator.async_update_listeners()
+                if self.api.room_write_generation != generation:
+                    self.coordinator.schedule_room_readback()
 
-    async def _set_register(self, address: int, field: str, value: int, room: RoomState) -> RoomState:
-        """Send an absolute value and verify the register through the normal read path."""
-        if getattr(room, field) == value:
-            return room
+    async def _set_flag(self, address: int, value: int) -> None:
+        """Send once. The coordinator reconciles accepted writes with the gateway."""
+        if self.api.data[ROOM_FLAG_KEYS[address]] == value:
+            return
         if self.coordinator.is_paused:
             raise HomeAssistantError("FEBOS polling is paused")
-        if not await self.api.set_hp_register(address, value):
+        if not await self.api.set_room_flag(address, value):
             raise HomeAssistantError(f"FEBOS could not write register {address}")
-        room = await self._read_room()
-        if getattr(room, field) == value:
-            return room
-        # The gateway can acknowledge before its DAM snapshot reflects the write.
-        await asyncio.sleep(0.5)
-        room = await self._read_room()
-        if getattr(room, field) == value:
-            return room
-        raise HomeAssistantError(f"FEBOS did not confirm register {address}")
 
-    async def _set_mode(self, mode: HVACMode, room: RoomState) -> RoomState:
+    async def _set_mode(self, mode: HVACMode) -> None:
         if mode not in self.hvac_modes:
             raise ServiceValidationError(f"Unsupported HVAC mode: {mode}")
         if mode != HVACMode.OFF:
-            room = await self._set_register(WINTER, "winter", int(mode == HVACMode.HEAT), room)
-        return await self._set_register(POWER, "power", int(mode != HVACMode.OFF), room)
+            await self._set_flag(WINTER, int(mode == HVACMode.HEAT))
+        await self._set_flag(POWER, int(mode != HVACMode.OFF))
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
-        async with self._command() as room:
-            await self._set_mode(hvac_mode, room)
+        async with self._command():
+            await self._set_mode(hvac_mode)
 
     async def async_turn_on(self) -> None:
-        async with self._command() as room:
-            await self._set_register(POWER, "power", 1, room)
+        async with self._command():
+            await self._set_flag(POWER, 1)
 
     async def async_turn_off(self) -> None:
         await self.async_set_hvac_mode(HVACMode.OFF)
@@ -172,8 +166,25 @@ class FebosHPRoomClimate(CoordinatorEntity[FebosHPCoordinator], ClimateEntity):
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         if preset_mode not in self._attr_preset_modes:
             raise ServiceValidationError(f"Unsupported preset: {preset_mode}")
-        async with self._command() as room:
-            await self._set_register(NIGHT, "night", int(preset_mode == PRESET_SLEEP), room)
+        async with self._command():
+            await self._set_flag(NIGHT, int(preset_mode == PRESET_SLEEP))
+
+    async def _read_profile_after_mode_change(self) -> RoomState:
+        """A dependent temperature write needs the actual new season and attenuation."""
+        requested = {addr: flag.value for addr, flag in self.api.pending_room_flags.items()}
+        for attempt in range(ROOM_CHECK_ATTEMPTS + 1):
+            if attempt:
+                await asyncio.sleep(ROOM_CHECK_INTERVAL)
+            if self.coordinator.is_paused:
+                raise HomeAssistantError("FEBOS polling is paused")
+            await self.api.read_hp_data()
+            room = self.api.room_for_control
+            if (
+                room is not None and room.offset is not None and not self.api.pending_room_flags and
+                all(self.api.data[ROOM_FLAG_KEYS[addr]] == value for addr, value in requested.items())
+            ):
+                return room
+        raise HomeAssistantError("FEBOS has not confirmed the new operating mode and temperature profile")
 
     async def async_set_temperature(self, **kwargs: Any) -> None:
         async with self._command() as room:
@@ -184,34 +195,14 @@ class FebosHPRoomClimate(CoordinatorEntity[FebosHPCoordinator], ClimateEntity):
                     # Validate the combined request before making any change to the plant.
                     winter = mode == HVACMode.HEAT if mode != HVACMode.OFF else None
                     room.comfort_for_target(temperature, winter=winter)
-                    room = await self._set_mode(mode, room)
+                    await self._set_mode(mode)
+                if self.api.pending_room_flags:
+                    self.coordinator.async_update_listeners()
+                    room = await self._read_profile_after_mode_change()
                 comfort = room.comfort_for_target(temperature)
             except ValueError as err:
                 raise ServiceValidationError(str(err)) from err
             if self.coordinator.is_paused:
                 raise HomeAssistantError("FEBOS polling is paused")
-            previous = self.api.pending_room_target
             if not await self.api.set_room_comfort(room, comfort):
                 raise HomeAssistantError(f"FEBOS could not write register {COMFORT}")
-            pending = self.api.pending_room_target
-            if pending is not None and pending is not previous:
-                self.coordinator.config_entry.async_create_background_task(
-                    self.coordinator.hass, self._async_confirm_target(pending), "FEBOS target readback"
-                )
-
-    async def _async_confirm_target(self, pending: PendingRoomTarget) -> None:
-        """Read only the HP groups until this particular write is reconciled."""
-        for _ in range(ROOM_TARGET_CHECK_ATTEMPTS):
-            await asyncio.sleep(ROOM_TARGET_CHECK_INTERVAL)
-            async with self.api.hp_lock:
-                if self.api.pending_room_target is not pending or self.coordinator.is_paused:
-                    return
-                try:
-                    await self.api.read_hp_data()
-                except ConnectionManagerError:
-                    # A read failure leaves the room unavailable. Normal polling handles recovery.
-                    return
-                finally:
-                    self.coordinator.async_update_listeners()
-                if self.api.pending_room_target is not pending:
-                    return

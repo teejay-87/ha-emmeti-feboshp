@@ -17,7 +17,14 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
 
-from .api import FebosHPAPI, TelnetCommandError, TelnetConnectionError
+from .api import (
+    ROOM_CHECK_ATTEMPTS,
+    ROOM_CHECK_INTERVAL,
+    FebosHPAPI,
+    TelnetCommandError,
+    TelnetConnectionError,
+)
+from .connection_manager import ConnectionManagerError
 from .const import (
     CONF_ENABLE_REPAIR_NOTIFICATION,
     CONF_FAILURES_THRESHOLD,
@@ -135,6 +142,32 @@ class FebosHPCoordinator(DataUpdateCoordinator[bool]):
     def is_paused(self) -> bool:
         """Return whether polling is paused."""
         return self._paused
+
+    def schedule_room_readback(self) -> None:
+        """Use one readback sequence for all registers written by the latest command."""
+        if self.is_paused or not (self.api.pending_room_flags or self.api.pending_room_target):
+            return
+        self.config_entry.async_create_background_task(
+            self.hass, self._async_confirm_room(self.api.room_write_generation), "FEBOS room readback"
+        )
+
+    async def _async_confirm_room(self, generation: int) -> None:
+        for _ in range(ROOM_CHECK_ATTEMPTS):
+            await asyncio.sleep(ROOM_CHECK_INTERVAL)
+            async with self.api.hp_lock:
+                if (
+                    self.is_paused or self.api.room_write_generation != generation or
+                    (not self.api.pending_room_flags and self.api.pending_room_target is None)
+                ):
+                    return
+                try:
+                    await self.api.read_hp_data()
+                except ConnectionManagerError:
+                    return
+                finally:
+                    self.async_update_listeners()
+                if not self.api.pending_room_flags and self.api.pending_room_target is None:
+                    return
 
     async def async_pause(self, duration: int | None = None) -> None:
         """Pause polling and close the connection to free the device.

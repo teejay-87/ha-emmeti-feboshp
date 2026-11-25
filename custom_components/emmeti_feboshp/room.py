@@ -8,6 +8,7 @@ EFFECTIVE = 9085
 POWER = 16384
 WINTER = 16385
 NIGHT = 16386
+ROOM_FLAG_KEYS = {POWER: "hp_onoff", WINTER: "hp_winter_mode", NIGHT: "hp_night_mode"}
 COMFORT = 16440
 ATTENUATION = 16442
 MIN_COMFORT = 150
@@ -27,7 +28,9 @@ class RoomState:
     attenuation: int
 
     @classmethod
-    def from_registers(cls, live: dict[str, str], settings: dict[str, str]) -> "RoomState":
+    def from_registers(
+        cls, live: dict[str, str], settings: dict[str, str], *, changing_season: bool = False
+    ) -> "RoomState":
         """Decode the raw replies, without using seeded or previously cached values."""
         state = cls(
             power=int(live[str(POWER)]),
@@ -38,9 +41,11 @@ class RoomState:
             comfort=int(settings[str(COMFORT)]),
             attenuation=int(settings[str(ATTENUATION)]),
         )
+        settings_season = int(settings.get(str(WINTER), state.winter))
         if (
             any(flag not in (0, 1) for flag in (state.power, state.winter, state.night))
-            or (str(WINTER) in settings and int(settings[str(WINTER)]) != state.winter)
+            or settings_season not in (0, 1)
+            or (not changing_season and settings_season != state.winter)
             or not MIN_COMFORT <= state.comfort <= MAX_COMFORT
             or not 10 <= state.attenuation <= 100
         ):

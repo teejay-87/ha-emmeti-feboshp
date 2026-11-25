@@ -116,6 +116,9 @@ The `target_temperature_pending` attribute stays true while the gateway updates 
 comfort and effective registers. The thermostat checks after two seconds and, if needed,
 checks twice more at two-second intervals. If a valid reading still shows the old values
 after six seconds, the dial shows the reported target and the integration logs a warning.
+Power, heating/cooling and Sleep/Follow schedule use the same confirmation timing, including
+changes made through their switches. A combined mode and temperature request checks the
+new operating mode and effective profile before calculating the comfort register.
 
 ### Known Limitations
 

@@ -30,7 +30,7 @@ from .connection_manager import (
 )
 from .const import DAM1_REGISTERS, MANUFACTURER, MODEL
 from .helpers import log_debug
-from .room import COMFORT, RoomState
+from .room import COMFORT, ROOM_FLAG_KEYS, WINTER, RoomState
 
 # Re-export the exception types so existing callers
 # (``coordinator``, ``config_flow``, tests) don't need to change imports.
@@ -43,9 +43,15 @@ __all__ = [
 
 _LOGGER = logging.getLogger(__name__)
 
-# Read both DAM snapshots shortly after a comfort write.
-ROOM_TARGET_CHECK_INTERVAL = 2
-ROOM_TARGET_CHECK_ATTEMPTS = 3
+# Both DAM snapshots can lag behind a successful register write.
+ROOM_CHECK_INTERVAL = 2
+ROOM_CHECK_ATTEMPTS = 3
+
+
+@dataclass(frozen=True)
+class PendingRoomFlag:
+    value: int
+    deadline: float
 
 
 @dataclass(frozen=True)
@@ -78,6 +84,8 @@ class FebosHPAPI:
         self.hp_lock = asyncio.Lock()
         self.room: RoomState | None = None
         self.pending_room_target: PendingRoomTarget | None = None
+        self.pending_room_flags: dict[int, PendingRoomFlag] = {}
+        self.room_write_generation = 0
 
         self._init_data_keys()
 
@@ -147,10 +155,13 @@ class FebosHPAPI:
         except (ConnectionUnavailableError, TelnetConnectionError, TelnetCommandError):
             self.room = None
             raise
-        self._merge_dam1(live)
+        settings = {}
         try:
             settings = await self._command("@DAM 2")
-            self.room = RoomState.from_registers(live, settings)
+            season = self.pending_room_flags.get(WINTER)
+            self.room = RoomState.from_registers(
+                live, settings, changing_season=season is not None and monotonic() < season.deadline
+            )
             self._reconcile_room_target(self.room)
         except (
             ConnectionUnavailableError, TelnetConnectionError, TelnetCommandError, KeyError, ValueError
@@ -158,6 +169,40 @@ class FebosHPAPI:
             # Older gateways may still provide valid live sensors and switches.
             self.room = None
             log_debug(_LOGGER, "read_hp_data", "Room settings unavailable", error=str(err))
+        self._merge_dam1(live)
+        self._reconcile_room_flags(live, settings)
+
+    async def set_room_flag(self, address: int, value: int) -> bool:
+        """Keep an accepted flag visible to both climate and switch entities until readback."""
+        if not await self.set_hp_register(address, value):
+            return False
+        self.data[ROOM_FLAG_KEYS[address]] = value
+        self.pending_room_flags[address] = PendingRoomFlag(
+            value, monotonic() + ROOM_CHECK_INTERVAL * ROOM_CHECK_ATTEMPTS
+        )
+        self.room_write_generation += 1
+        return True
+
+    def _reconcile_room_flags(self, live: dict[str, str], settings: dict[str, str]) -> None:
+        for address, pending in list(self.pending_room_flags.items()):
+            try:
+                value = int(live[str(address)])
+                settings_value = int(settings.get(str(WINTER), value)) if address == WINTER else value
+            except (KeyError, ValueError):
+                value = settings_value = None
+            if value in (0, 1):
+                # Some gateways repeat the season in DAM 2. Wait for both snapshots.
+                if value == settings_value == pending.value:
+                    del self.pending_room_flags[address]
+                    continue
+                if monotonic() >= pending.deadline:
+                    _LOGGER.warning(
+                        "Register %d did not confirm %d (live=%d, settings=%s). Using live value.",
+                        address, pending.value, value, settings_value,
+                    )
+                    del self.pending_room_flags[address]
+                    continue
+            self.data[ROOM_FLAG_KEYS[address]] = pending.value
 
     @property
     def room_for_control(self) -> RoomState | None:
@@ -184,8 +229,9 @@ class FebosHPAPI:
             ),
             previous_comfort=previous_comfort | {room.comfort},
             previous_effective=previous_effective | {room.effective},
-            deadline=monotonic() + ROOM_TARGET_CHECK_INTERVAL * ROOM_TARGET_CHECK_ATTEMPTS,
+            deadline=monotonic() + ROOM_CHECK_INTERVAL * ROOM_CHECK_ATTEMPTS,
         )
+        self.room_write_generation += 1
         return True
 
     def _reconcile_room_target(self, room: RoomState) -> None:
