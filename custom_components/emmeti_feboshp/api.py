@@ -16,7 +16,9 @@ https://github.com/teejay-87/ha-emmeti-feboshp
 from __future__ import annotations
 
 import asyncio
+from dataclasses import dataclass, replace
 import logging
+from time import monotonic
 
 from homeassistant.core import HomeAssistant
 
@@ -28,7 +30,7 @@ from .connection_manager import (
 )
 from .const import DAM1_REGISTERS, MANUFACTURER, MODEL
 from .helpers import log_debug
-from .room import RoomState
+from .room import COMFORT, RoomState
 
 # Re-export the exception types so existing callers
 # (``coordinator``, ``config_flow``, tests) don't need to change imports.
@@ -40,6 +42,19 @@ __all__ = [
 ]
 
 _LOGGER = logging.getLogger(__name__)
+
+# Allow the two DAM snapshots to catch up independently after a comfort write.
+ROOM_TARGET_CONFIRMATION_SECONDS = 120
+
+
+@dataclass(frozen=True)
+class PendingRoomTarget:
+    """Requested values and earlier values that either DAM group may still echo."""
+
+    expected: RoomState
+    previous_comfort: frozenset[int]
+    previous_effective: frozenset[int]
+    deadline: float
 
 
 class FebosHPAPI:
@@ -61,6 +76,7 @@ class FebosHPAPI:
         self.connection_manager = ConnectionManager(host=host, port=port)
         self.hp_lock = asyncio.Lock()
         self.room: RoomState | None = None
+        self.pending_room_target: PendingRoomTarget | None = None
 
         self._init_data_keys()
 
@@ -134,12 +150,67 @@ class FebosHPAPI:
         try:
             settings = await self._command("@DAM 2")
             self.room = RoomState.from_registers(live, settings)
+            self._reconcile_room_target(self.room)
         except (
             ConnectionUnavailableError, TelnetConnectionError, TelnetCommandError, KeyError, ValueError
         ) as err:
             # Older gateways may still provide valid live sensors and switches.
             self.room = None
             log_debug(_LOGGER, "read_hp_data", "Room settings unavailable", error=str(err))
+
+    @property
+    def room_for_control(self) -> RoomState | None:
+        """Keep the requested dial and offset stable while the two snapshots catch up."""
+        pending = self.pending_room_target
+        if self.room is None or pending is None:
+            return self.room
+        return replace(
+            self.room, comfort=pending.expected.comfort, effective=pending.expected.effective
+        )
+
+    async def set_room_comfort(self, room: RoomState, comfort: int) -> bool:
+        """Write once under hp_lock. Regular polls confirm the comfort and effective targets."""
+        if comfort == room.comfort:
+            return True
+        if not await self.set_hp_register(COMFORT, comfort):
+            return False
+        previous = self.pending_room_target
+        previous_comfort = previous.previous_comfort if previous else frozenset()
+        previous_effective = previous.previous_effective if previous else frozenset()
+        self.pending_room_target = PendingRoomTarget(
+            expected=replace(
+                room, comfort=comfort, effective=comfort + (room.effective - room.comfort)
+            ),
+            previous_comfort=previous_comfort | {room.comfort},
+            previous_effective=previous_effective | {room.effective},
+            deadline=monotonic() + ROOM_TARGET_CONFIRMATION_SECONDS,
+        )
+        return True
+
+    def _reconcile_room_target(self, room: RoomState) -> None:
+        pending = self.pending_room_target
+        if pending is None:
+            return
+        expected = pending.expected
+        mode_changed = (room.power, room.winter, room.night, room.attenuation) != (
+            expected.power, expected.winter, expected.night, expected.attenuation
+        )
+        confirmed = room.comfort == expected.comfort and room.effective == expected.effective
+        # Only hide known stale values. A schedule boundary or external adjustment
+        # can produce a new reading even before the requested pair is visible.
+        new_reading = (
+            (room.comfort != expected.comfort and room.comfort not in pending.previous_comfort) or
+            (room.effective != expected.effective and room.effective not in pending.previous_effective)
+        )
+        if confirmed or mode_changed or new_reading:
+            self.pending_room_target = None
+        elif monotonic() >= pending.deadline:
+            _LOGGER.warning(
+                "Room target was not confirmed: requested comfort/effective %.1f/%.1f °C, "
+                "reported %.1f/%.1f °C. Using reported values.",
+                expected.comfort / 10, expected.effective / 10, room.comfort / 10, room.effective / 10,
+            )
+            self.pending_room_target = None
 
     async def telnet_set_relay(self, state: str) -> bool:
         """Set the device relay to ``"on"`` or ``"off"``.
@@ -231,6 +302,8 @@ class FebosHPAPI:
         """
         cmd_main = cmd[0:4].lower()
         lines = raw.splitlines()
+        if cmd_main == "@reg" and any(line.strip().lower() == "command error" for line in lines):
+            raise ValueError("Gateway rejected the register command")
 
         # First useful line index — skip the echoed command, or one extra if
         # the device prepended a LF.

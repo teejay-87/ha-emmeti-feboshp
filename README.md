@@ -111,6 +111,11 @@ Choose **Follow schedule** to release it, including during a scheduled setback. 
 in °C. It refreshes the controller readings before setting the temperature and requires a
 consistent profile for that write. Polling and schedule transitions only read the device.
 
+After a successful comfort write, the dial shows the requested effective target immediately.
+The `target_temperature_pending` attribute stays true while the gateway updates its
+comfort and effective registers. If the values still disagree at the first valid poll
+after two minutes, the dial shows the reported target and the integration logs a warning.
+
 ### Known Limitations
 
 - **Single device per integration instance**: Each FebosHP device requires a separate

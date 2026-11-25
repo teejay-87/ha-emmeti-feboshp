@@ -73,7 +73,7 @@ class FebosHPRoomClimate(CoordinatorEntity[FebosHPCoordinator], ClimateEntity):
 
     @property
     def native_target_temperature(self) -> float | None:
-        return room.effective / 10 if (room := self.api.room) else None
+        return room.effective / 10 if (room := self.api.room_for_control) else None
 
     # Home Assistant versions before the native temperature API (including 2024.12).
     if not hasattr(ClimateEntity, "native_target_temperature"):
@@ -83,12 +83,12 @@ class FebosHPRoomClimate(CoordinatorEntity[FebosHPCoordinator], ClimateEntity):
 
     @property
     def min_temp(self) -> float:
-        room = self.api.room
+        room = self.api.room_for_control
         return (MIN_COMFORT + (room.offset or 0)) / 10 if room else MIN_COMFORT / 10
 
     @property
     def max_temp(self) -> float:
-        room = self.api.room
+        room = self.api.room_for_control
         return (MAX_COMFORT + (room.offset or 0)) / 10 if room else MAX_COMFORT / 10
 
     @property
@@ -101,13 +101,14 @@ class FebosHPRoomClimate(CoordinatorEntity[FebosHPCoordinator], ClimateEntity):
     def extra_state_attributes(self) -> dict[str, Any]:
         if (room := self.api.room) is None:
             return {}
-        offset = room.offset
+        offset = (self.api.room_for_control or room).offset
         profile = None
         if offset == 0:
             profile = PRESET_COMFORT
         elif offset is not None:
             profile = PRESET_SLEEP if room.night else PRESET_ECO
         return {
+            "target_temperature_pending": self.api.pending_room_target is not None,
             "temperature_profile": profile,
             "comfort_temperature_c": room.comfort / 10,
             "attenuation_c": room.attenuation / 10,
@@ -115,7 +116,7 @@ class FebosHPRoomClimate(CoordinatorEntity[FebosHPCoordinator], ClimateEntity):
 
     async def _read_room(self) -> RoomState:
         await self.api.read_hp_data()
-        if (room := self.api.room) is None:
+        if (room := self.api.room_for_control) is None:
             raise HomeAssistantError("Room control registers are unavailable")
         return room
 
@@ -185,4 +186,7 @@ class FebosHPRoomClimate(CoordinatorEntity[FebosHPCoordinator], ClimateEntity):
                 comfort = room.comfort_for_target(temperature)
             except ValueError as err:
                 raise ServiceValidationError(str(err)) from err
-            await self._set_register(COMFORT, "comfort", comfort, room)
+            if self.coordinator.is_paused:
+                raise HomeAssistantError("FEBOS polling is paused")
+            if not await self.api.set_room_comfort(room, comfort):
+                raise HomeAssistantError(f"FEBOS could not write register {COMFORT}")

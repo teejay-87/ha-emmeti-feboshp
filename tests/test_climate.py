@@ -2,7 +2,7 @@
 
 import asyncio
 from unittest import IsolatedAsyncioTestCase
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from homeassistant.components.climate import HVACMode
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
@@ -109,12 +109,76 @@ class RoomClimateTests(IsolatedAsyncioTestCase):
         self.api.connection_manager.execute.assert_not_called()
         self.assertEqual(self.writes, [])
 
-    async def test_write_requires_confirmation(self):
+    async def test_stale_snapshots_confirm_without_resending(self):
+        # A late effective setpoint can temporarily equal the *new* comfort register.
         self.ignore_write = True
+        await self.climate.async_set_temperature(temperature=20)
+        await self.api.async_get_data()
+        self.assertEqual(self.climate.native_target_temperature, 20)
+        self.assertEqual(self.api.data["hp_ambient_setpoint"], 21)
+        self.assertTrue(self.climate.extra_state_attributes["target_temperature_pending"])
+        self.settings[16440] = 210
+        await self.api.async_get_data()
+        self.assertEqual(self.climate.native_target_temperature, 20)
+        self.assertEqual(self.climate.extra_state_attributes["temperature_profile"], "eco")
+        await self.climate.async_set_temperature(temperature=20)
+        self.apply_profile()
+        await self.api.async_get_data()
+        self.assertFalse(self.climate.extra_state_attributes["target_temperature_pending"])
+        self.assertEqual(self.climate.native_target_temperature, 20)
+        self.assertEqual(self.writes, [(16440, 210)])
+
+    async def test_latest_target_wins_while_effective_arrives_before_comfort(self):
+        self.ignore_write = True
+        await self.climate.async_set_temperature(temperature=22)
+        self.live[9085] = 220
+        await self.api.async_get_data()
+        self.assertTrue(self.climate.extra_state_attributes["target_temperature_pending"])
+        # Going back to the original target must override the first hardware command.
+        await self.climate.async_set_temperature(temperature=21)
+        self.settings[16440] = 230
+        await self.api.async_get_data()
+        self.assertEqual(self.climate.native_target_temperature, 21)
+        self.settings[16440] = 220
+        self.apply_profile()
+        await self.api.async_get_data()
+        self.assertFalse(self.climate.extra_state_attributes["target_temperature_pending"])
+        self.assertEqual(self.writes, [(16440, 230), (16440, 220)])
+
+    async def test_unconfirmed_target_expires_on_poll(self):
+        self.ignore_write = True
+        with patch("custom_components.emmeti_feboshp.api.monotonic", return_value=100):
+            await self.climate.async_set_temperature(temperature=22)
+        with (
+            patch("custom_components.emmeti_feboshp.api.monotonic", return_value=221),
+            self.assertLogs("custom_components.emmeti_feboshp.api", level="WARNING"),
+        ):
+            await self.api.async_get_data()
+        self.assertEqual(self.climate.native_target_temperature, 21)
+        self.assertFalse(self.climate.extra_state_attributes["target_temperature_pending"])
+        self.assertEqual(self.writes, [(16440, 230)])
+
+    async def test_external_adjustment_supersedes_pending_target(self):
+        self.ignore_write = True
+        await self.climate.async_set_temperature(temperature=22)
+        self.settings[16440] = 240
+        self.apply_profile()
+        await self.api.async_get_data()
+        self.assertFalse(self.climate.extra_state_attributes["target_temperature_pending"])
+        self.assertEqual(self.climate.native_target_temperature, 23)
+        self.assertEqual(self.writes, [(16440, 230)])
+
+    async def test_gateway_rejection_does_not_change_target(self):
+        async def reject_write(cmd):
+            if cmd.startswith("@REG 1 "):
+                return f"{cmd}\r\ncommand error\r\n\r\nready...\r\n"
+            return await self.reply(cmd)
+
+        self.api.connection_manager.execute.side_effect = reject_write
         with self.assertRaises(HomeAssistantError):
             await self.climate.async_set_temperature(temperature=22)
+        self.assertFalse(self.climate.extra_state_attributes["target_temperature_pending"])
         self.assertEqual(self.climate.native_target_temperature, 21)
-        self.assertEqual(self.writes, [(16440, 230)])
 
     async def test_concurrent_changes_use_new_profile(self):
         self.scheduled_attenuation = False

@@ -57,6 +57,7 @@
             "state": { "comfort": "Comfort", "eco": "Attenuazione programmata", "sleep": "Attenuazione forzata" }
           },
           "comfort_temperature_c": { "name": "Comfort memorizzato (°C)" },
+          "target_temperature_pending": { "name": "In attesa di conferma del setpoint" },
           "attenuation_c": { "name": "Attenuazione (°C)" }
         }
       }

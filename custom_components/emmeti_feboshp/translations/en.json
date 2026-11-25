@@ -57,6 +57,7 @@
             "state": { "comfort": "Comfort", "eco": "Scheduled attenuation", "sleep": "Forced attenuation" }
           },
           "comfort_temperature_c": { "name": "Stored comfort (°C)" },
+          "target_temperature_pending": { "name": "Awaiting target confirmation" },
           "attenuation_c": { "name": "Attenuation (°C)" }
         }
       }
